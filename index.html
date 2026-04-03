@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ArcPath Track Layout Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --text: #4a545f;
+  --accent: #ed8f57;
+  --accent-hover: #d97d45;
+  --bg: #ffffff;
+  --panel-bg: #f5f6f8;
+  --border: #dde0e4;
+}
+
+body {
+  font-family: Lato, 'Noto Sans JP', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* ── Toolbar ── */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 20;
+  flex-wrap: wrap;
+  min-height: 40px;
+}
+#toolbar .logo { font-weight: 700; font-size: 14px; margin-right: 8px; white-space: nowrap; }
+#toolbar .logo .arc { color: var(--accent); }
+#toolbar .logo .path { color: var(--text); }
+#toolbar button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background .15s;
+  min-height: 32px;
+  min-width: 32px;
+}
+#toolbar button:hover { background: #eee; }
+#toolbar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+#toolbar .sep { width: 1px; height: 24px; background: var(--border); margin: 0 2px; }
+#toolbar .zoom-label { font-size: 12px; min-width: 42px; text-align: center; }
+
+/* ── Main area ── */
+#main { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+/* ── Palette (Desktop) ── */
+#palette {
+  width: 220px;
+  min-width: 220px;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: margin-left 0.3s ease;
+}
+#palette.collapsed { margin-left: -220px; }
+#palette-toggle {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 12;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-size: 14px;
+  writing-mode: vertical-rl;
+}
+#palette h3 {
+  font-size: 12px;
+  padding: 8px 10px 4px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  position: sticky;
+  top: 0;
+  background: var(--panel-bg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#palette h3 .cat-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: grab;
+  font-size: 12px;
+  border-bottom: 1px solid #eee;
+  transition: background .1s;
+  min-height: 44px;
+}
+.palette-item:hover { background: #e8eaed; }
+.palette-item:active { cursor: grabbing; }
+.palette-item.selected { background: #fff5ed; border-left: 3px solid var(--accent); }
+.palette-item .piece-color-bar {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.palette-preview { width: 50px; height: 26px; flex-shrink: 0; }
+.palette-label { line-height: 1.3; }
+.palette-label .price { color: #999; font-size: 11px; }
+
+/* ── Canvas area ── */
+#canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #fafafa;
+}
+#canvas-wrap svg { position: absolute; top: 0; left: 0; }
+#grid-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+/* ── Info bar ── */
+#infobar {
+  position: absolute;
+  bottom: 8px; left: 8px;
+  font-size: 11px;
+  color: #999;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.modal h2 { font-size: 18px; margin-bottom: 12px; }
+.modal table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.modal th { text-align: left; border-bottom: 2px solid var(--border); padding: 6px 8px; font-weight: 700; }
+.modal td { border-bottom: 1px solid #eee; padding: 6px 8px; }
+.modal .total-row td { border-top: 2px solid var(--text); font-weight: 700; font-size: 14px; }
+.modal button.close-btn {
+  margin-top: 16px;
+  padding: 8px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* ── Drag ghost ── */
+#drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 50;
+  opacity: .7;
+  display: none;
+}
+
+/* ── Context menu ── */
+#ctx-menu {
+  display: none;
+  position: fixed;
+  z-index: 60;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  padding: 4px 0;
+  min-width: 160px;
+}
+#ctx-menu div {
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+#ctx-menu div:hover { background: #f0f0f0; }
+
+/* ── Mobile bottom drawer ── */
+#mobile-drawer {
+  display: none;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 30;
+  background: var(--panel-bg);
+  border-top: 2px solid var(--border);
+  transition: transform 0.3s ease;
+  max-height: 55vh;
+  flex-direction: column;
+}
+#mobile-drawer.collapsed { transform: translateY(calc(100% - 44px)); }
+#mobile-drawer-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  cursor: pointer;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  flex-shrink: 0;
+}
+#mobile-drawer-handle .drawer-arrow { font-size: 12px; transition: transform 0.3s; }
+#mobile-drawer.collapsed #mobile-drawer-handle .drawer-arrow { transform: rotate(180deg); }
+#mobile-drawer-content { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+#mobile-drawer .palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 4px;
+  padding: 8px;
+}
+#mobile-drawer .palette-grid-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 48px;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+#mobile-drawer .palette-grid-item:active { background: #e8eaed; }
+#mobile-drawer .palette-grid-item.selected { border-color: var(--accent); background: #fff5ed; }
+#mobile-drawer .palette-grid-item .item-badge { width: 8px; height: 32px; border-radius: 3px; flex-shrink: 0; }
+#mobile-drawer .palette-grid-item .item-info { line-height: 1.3; }
+#mobile-drawer .palette-grid-item .item-info .item-price { font-size: 10px; color: #999; }
+.palette-cat-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 8px 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.palette-cat-header .cat-dot-m { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* ── Floating add button (mobile) ── */
+#fab-add {
+  display: none;
+  position: fixed;
+  bottom: 72px;
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 56px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 40;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+#fab-add:active { background: var(--accent-hover); transform: scale(0.95); }
+
+/* ── Endpoint handle styles (SVG-based, just for reference) ── */
+.endpoint-handle { cursor: pointer; }
+.endpoint-handle:hover circle { r: 7; }
+
+/* ── Mobile-specific ── */
+@media (max-width: 767px) {
+  #palette { display: none !important; }
+  #palette-toggle { display: none !important; }
+  #mobile-drawer { display: flex; }
+  #fab-add { display: block; }
+  #toolbar { padding: 3px 6px; gap: 4px; }
+  #toolbar .logo { font-size: 12px; margin-right: 4px; }
+  #toolbar button { padding: 3px 6px; font-size: 11px; min-height: 36px; }
+  #toolbar .sep { display: none; }
+  #toolbar .desktop-only { display: none; }
+  #infobar { display: none; }
+}
+
+/* ── Desktop-specific ── */
+@media (min-width: 768px) {
+  #mobile-drawer { display: none !important; }
+  #palette-toggle { display: block; }
+  #palette-toggle { left: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div class="logo"><span class="arc">Arc</span><span class="path">Path</span> Planner</div>
+  <button id="btn-undo" title="戻る (Ctrl+Z)">&#8630;</button>
+  <button id="btn-redo" title="進む (Ctrl+Shift+Z)">&#8631;</button>
+  <div class="sep"></div>
+  <button id="btn-rotate" title="回転 (R)">&#8635; 回転</button>
+  <button id="btn-flip" title="反転 (F)">&#8596; 反転</button>
+  <button id="btn-delete" title="削除 (Del)">&#10005;</button>
+  <div class="sep"></div>
+  <button id="btn-snap" class="active" title="スナップ">&#128279;</button>
+  <button id="btn-grid" class="desktop-only" title="グリッド">&#9638;</button>
+  <div class="sep"></div>
+  <button id="btn-zoom-out">&minus;</button>
+  <span class="zoom-label" id="zoom-label">1.0x</span>
+  <button id="btn-zoom-in">+</button>
+  <div class="sep desktop-only"></div>
+  <button id="btn-clear" class="desktop-only">クリア</button>
+  <button id="btn-parts">&#128196;</button>
+  <button id="btn-export" class="desktop-only">PNG</button>
+  <button id="btn-save" class="desktop-only">&#128190;</button>
+  <button id="btn-load" class="desktop-only">&#128194;</button>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="palette"></div>
+  <div id="canvas-wrap">
+    <div id="palette-toggle" onclick="toggleDesktopPalette()">&#9664; パーツ</div>
+    <canvas id="grid-canvas"></canvas>
+    <svg id="track-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="infobar">R=回転 | F=反転 | Del=削除 | スクロール=ズーム | 端点ドラッグ=延伸</div>
+    <div id="mobile-drawer" class="collapsed">
+      <div id="mobile-drawer-handle">
+        <span class="drawer-arrow">&#9650;</span>
+        <span id="drawer-selected-label">&#9650; パーツ</span>
+      </div>
+      <div id="mobile-drawer-content"></div>
+    </div>
+  </div>
+</div>
+
+<button id="fab-add" aria-label="パーツを開く">+</button>
+
+<!-- On-screen error log -->
+<div id="error-log" style="display:none;position:fixed;bottom:60px;left:8px;right:8px;max-height:30vh;overflow-y:auto;background:rgba(0,0,0,0.85);color:#ff6b6b;font-family:monospace;font-size:11px;padding:8px;border-radius:6px;z-index:200;pointer-events:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <b style="color:#fff;">Debug Log</b>
+    <span id="error-log-close" style="color:#fff;cursor:pointer;padding:4px 8px;">✕</span>
+  </div>
+  <div id="error-log-content"></div>
+</div>
+
+<svg id="drag-ghost" xmlns="http://www.w3.org/2000/svg" width="100" height="40"></svg>
+
+<div id="ctx-menu">
+  <div data-action="rotate">&#8635; 回転 (11.25&deg;)</div>
+  <div data-action="rotate-fine">&#8635; 微回転 (5.625&deg;)</div>
+  <div data-action="rotate-90">&#8635; 90&deg;回転</div>
+  <div data-action="flip">&#8596; 反転</div>
+  <div data-action="duplicate">&#10695; 複製</div>
+  <div data-action="delete">&#10005; 削除</div>
+</div>
+
+<div class="modal-overlay" id="parts-modal">
+  <div class="modal">
+    <h2>パーツリスト</h2>
+    <div id="parts-content"></div>
+    <button class="close-btn" onclick="document.getElementById('parts-modal').classList.remove('show')">閉じる</button>
+  </div>
+</div>
+
+<script>
+// ===============================================================
+// ArcPath Track Layout Planner v2 — Modeless, Endpoint-driven
+// ===============================================================
+
+(() => {
+"use strict";
+
+// ── On-screen error display ──
+const _errorLogEl = document.getElementById('error-log');
+const _errorLogContent = document.getElementById('error-log-content');
+let _errorCount = 0;
+function showError(msg) {
+  _errorCount++;
+  const line = document.createElement('div');
+  line.style.borderBottom = '1px solid #333';
+  line.style.padding = '2px 0';
+  const ts = new Date().toLocaleTimeString();
+  line.textContent = `[${ts}] #${_errorCount}: ${msg}`;
+  _errorLogContent.appendChild(line);
+  _errorLogEl.style.display = 'block';
+  _errorLogContent.scrollTop = _errorLogContent.scrollHeight;
+  console.error('ArcPath:', msg);
+}
+// Also log interaction state for debugging
+function showDebug(msg) {
+  const line = document.createElement('div');
+  line.style.color = '#aaa';
+  line.style.padding = '1px 0';
+  line.textContent = msg;
+  _errorLogContent.appendChild(line);
+  _errorLogEl.style.display = 'block';
+  _errorLogContent.scrollTop = _errorLogContent.scrollHeight;
+}
+document.getElementById('error-log-close').addEventListener('click', () => {
+  _errorLogEl.style.display = 'none';
+});
+
+// Global error handlers
+window.addEventListener('error', (e) => { showError(`Global: ${e.message} at ${e.filename}:${e.lineno}`); });
+window.addEventListener('unhandledrejection', (e) => { showError(`Promise: ${e.reason}`); });
+
+const isMobile = () => window.innerWidth < 768;
+
+// ── Color map ──
+const PIECE_COLORS = {
+  'ground-slab':     '#4CAF50',
+  'ground-ladder':   '#2196F3',
+  'elevated-single': '#FF9800',
+  'elevated-double': '#9C27B0',
+  'kato':            '#E53935',
+  'pillar':          '#795548',
+  'accessory':       '#607D8B',
+};
+
+function getPieceColorKey(def) {
+  if (def.type === 'accessory') return 'accessory';
+  if (def.brand === 'KATO') return 'kato';
+  if (def.level === 'ground' && def.variant === 'slab') return 'ground-slab';
+  if (def.level === 'ground' && def.variant === 'ladder') return 'ground-ladder';
+  if (def.level === 'elevated' && def.double) return 'elevated-double';
+  if (def.level === 'elevated') return 'elevated-single';
+  return 'accessory';
+}
+
+function getPieceColor(def) {
+  return PIECE_COLORS[getPieceColorKey(def)] || '#607D8B';
+}
+
+function getBrandBadge(def) {
+  let text = def.brand || '';
+  if (def.variant === 'slab') text += ' スラブ';
+  else if (def.variant === 'ladder') text += ' FL';
+  else if (def.level === 'elevated' && def.double) text += ' 複線高架';
+  else if (def.level === 'elevated') text += ' 高架';
+  else if (def.brand === 'KATO' && def.name && def.name.includes('PC')) text += ' PC';
+  const color = def.brand === 'KATO' ? '#E53935' : getPieceColor(def);
+  return { text, color };
+}
+
+function getPieceLabel(def) {
+  // Brand prefix
+  const brandMap = { 'ArcPath': 'AP', 'KATO': 'K' };
+  const b = brandMap[def.brand] || '';
+
+  // Track variant suffix
+  let v = '';
+  if (def.brand === 'ArcPath') {
+    if (def.level === 'ground' && def.variant === 'slab') v = 'スラブ';
+    else if (def.level === 'ground' && def.variant === 'ladder') v = 'FL';
+    else if (def.level === 'elevated' && def.double) v = '複線';
+    else if (def.level === 'elevated') v = '高架';
+  } else if (def.brand === 'KATO') {
+    // Detect PC from name
+    v = (def.name && def.name.includes('PC')) ? 'PC' : '';
+  }
+
+  const tag = b + (v ? ' ' + v : '');
+
+  if (def.type === 'straight') {
+    return tag + ' ' + def.length;
+  }
+  if (def.type === 'curve') {
+    if (def.double) return tag + ' ' + def.innerR + '/' + def.outerR;
+    return tag + ' R' + def.radius;
+  }
+  if (def.type === 'turnout') {
+    return tag + ' ' + (def.name || '').replace(/^(手動|電動)/, '');
+  }
+  if (def.type === 'crossing') return tag + ' X';
+  if (def.type === 'bumper') return tag + ' ▮';
+  return tag;
+}
+
+// ── Visual scaling — UNIFORM /4 for geometric consistency ──
+const VISUAL_SCALE = 4;
+
+function getVisualStraightLength(mmLength) {
+  return Math.round(mmLength / VISUAL_SCALE);
+}
+
+function getVisualCurveRadius(realRadius) {
+  return realRadius / VISUAL_SCALE;
+}
+
+// Curve angle: real (no deformation)
+function getVisualCurveAngle(realAngle) {
+  return realAngle;
+}
+
+const TRACK_W = 12;
+const DOUBLE_SPACING = 60 / VISUAL_SCALE; // 60mm real center-to-center = 15px
+
+// ── Catalog (full lineup from arcpath_full_lineup.tsv) ──
+const CATALOG = [
+  // ═══ 地上スラブ 直線 ═══
+  { brand:'ArcPath', sku:'RM-HOFLSS114-LGY', cat:'直線', name:'地上スラブ 114mm', price:800, type:'straight', length:114, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLSS123-LGY', cat:'直線', name:'地上スラブ 123mm', price:900, type:'straight', length:123, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLSS149-LGY', cat:'直線', name:'地上スラブ 149mm', price:1100, type:'straight', length:149, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLSS174-LGY', cat:'直線', name:'地上スラブ 174mm', price:1300, type:'straight', length:174, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLSS246-GY',  cat:'直線', name:'平面スラブ 246mm', price:1500, type:'straight', length:246, variant:'slab', level:'ground' },
+  // ═══ 地上FL 直線 ═══
+  { brand:'ArcPath', sku:'RM-HOFLFL114-LGY', cat:'直線', name:'地上FL 114mm', price:900, type:'straight', length:114, variant:'ladder', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLFL123-LGY', cat:'直線', name:'地上FL 123mm', price:1100, type:'straight', length:123, variant:'ladder', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLFL149-LGY', cat:'直線', name:'地上FL 149mm', price:1300, type:'straight', length:149, variant:'ladder', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLFL174-LGY', cat:'直線', name:'地上FL 174mm', price:1500, type:'straight', length:174, variant:'ladder', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLFL246-GY',  cat:'直線', name:'平面FL 246mm', price:2000, type:'straight', length:246, variant:'ladder', level:'ground' },
+  // ═══ 地上スラブ 曲線 ═══
+  { brand:'ArcPath', sku:'RM-HOFLRS730-LGY',  cat:'曲線', name:'地上スラブ R730 11.25°', price:1300, type:'curve', radius:730, angle:11.25, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLRS790-LGY',  cat:'曲線', name:'地上スラブ R790 11.25°', price:1300, type:'curve', radius:790, angle:11.25, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLRS850-LGY',  cat:'曲線', name:'地上スラブ R850 11.25°', price:1300, type:'curve', radius:850, angle:11.25, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLRS910-LGY',  cat:'曲線', name:'地上スラブ R910 11.25°', price:1300, type:'curve', radius:910, angle:11.25, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLRS1546-LGY', cat:'曲線', name:'地上スラブ R1546 5.625°', price:1300, type:'curve', radius:1546, angle:5.625, variant:'slab', level:'ground' },
+  { brand:'ArcPath', sku:'RM-HOFLRS1606-LGY', cat:'曲線', name:'地上スラブ R1606 5.625°', price:1300, type:'curve', radius:1606, angle:5.625, variant:'slab', level:'ground' },
+  // ═══ 単線高架 直線 ═══
+  { brand:'ArcPath', sku:'RM-HOSSS246-LGY',    cat:'直線', name:'単線高架 246mm', price:2000, type:'straight', length:246, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSSA246-LGY',    cat:'直線', name:'単線アドオン 246mm', price:1500, type:'straight', length:246, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSSA369-LGY',    cat:'直線', name:'単線アドオン 369mm', price:2000, type:'straight', length:369, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSSS246VS-LGY',  cat:'直線', name:'単線 縦凸 246mm', price:2000, type:'straight', length:246, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSSS246VB-LGY',  cat:'直線', name:'単線 縦凹 246mm', price:2000, type:'straight', length:246, variant:'slab', level:'elevated' },
+  // ═══ 単線高架 曲線 ═══
+  { brand:'ArcPath', sku:'RM-HOSRS730-LGY',  cat:'曲線', name:'単線高架 R730 11.25°', price:1500, type:'curve', radius:730, angle:11.25, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSRS790-LGY',  cat:'曲線', name:'単線高架 R790 11.25°', price:1500, type:'curve', radius:790, angle:11.25, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSRS850-LGY',  cat:'曲線', name:'単線高架 R850 11.25°', price:1500, type:'curve', radius:850, angle:11.25, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSRS910-LGY',  cat:'曲線', name:'単線高架 R910 11.25°', price:1500, type:'curve', radius:910, angle:11.25, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSRS1546-LGY', cat:'曲線', name:'単線高架 R1546 5.625°', price:1500, type:'curve', radius:1546, angle:5.625, variant:'slab', level:'elevated' },
+  { brand:'ArcPath', sku:'RM-HOSRS1606-LGY', cat:'曲線', name:'単線高架 R1606 5.625°', price:1500, type:'curve', radius:1606, angle:5.625, variant:'slab', level:'elevated' },
+  // ═══ 複線高架 直線 ═══
+  { brand:'ArcPath', sku:'RM-HODSS246-LGY',    cat:'複線直線', name:'複線高架 246mm', price:4000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODSA246-LGY',    cat:'複線直線', name:'複線アドオン 246mm', price:3000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODSA369-LGY',    cat:'複線直線', name:'複線アドオン 369mm', price:4000, type:'straight', length:369, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODSS246VS-LGY',  cat:'複線直線', name:'複線 縦凸 246mm', price:4000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODSS246VB-LGY',  cat:'複線直線', name:'複線 縦凹 246mm', price:4000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
+  // ═══ 複線高架 曲線 ═══
+  { brand:'ArcPath', sku:'RM-HODRS730-790-LGY',   cat:'複線曲線', name:'複線高架 R730/790 11.25°', price:3000, type:'curve', radius:760, innerR:730, outerR:790, angle:11.25, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODRS790-850-LGY',   cat:'複線曲線', name:'複線高架 R790/850 11.25°', price:3000, type:'curve', radius:820, innerR:790, outerR:850, angle:11.25, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODRS850-910-LGY',   cat:'複線曲線', name:'複線高架 R850/910 11.25°', price:3000, type:'curve', radius:880, innerR:850, outerR:910, angle:11.25, variant:'slab', level:'elevated', double:true },
+  { brand:'ArcPath', sku:'RM-HODRS1546-1606-LGY', cat:'複線曲線', name:'複線高架 R1546/1606 5.625°', price:3000, type:'curve', radius:1576, innerR:1546, outerR:1606, angle:5.625, variant:'slab', level:'elevated', double:true },
+  // ═══ 橋脚 ═══
+  { brand:'ArcPath', sku:'RM-HOSL001NL-SET-LGY',   cat:'橋脚', name:'標準橋脚 4つセット', price:1500, type:'accessory' },
+  { brand:'ArcPath', sku:'RM-HOSL001NL-SET-6-LGY', cat:'橋脚', name:'6番橋脚 4つセット', price:1500, type:'accessory' },
+  { brand:'ArcPath', sku:'RM-HOSL001SET-LGY',      cat:'橋脚', name:'勾配橋脚セット', price:5000, type:'accessory' },
+  // ═══ アクセサリ ═══
+  { brand:'ArcPath', sku:'RM-HOTPLT246-GY',    cat:'アクセサリ', name:'3線プレート 246mm', price:500, type:'accessory' },
+  { brand:'ArcPath', sku:'RM-HOACC001TP-LGY', cat:'アクセサリ', name:'アクセサリホルダ 10個入り', price:500, type:'accessory' },
+  // ═══════════════════════════════════════════
+  // KATO HOユニトラック
+  // ═══════════════════════════════════════════
+  // ═══ HO直線 ═══
+  { brand:'KATO', sku:'2-105', cat:'直線', name:'60mm', price:275, type:'straight', length:60 },
+  { brand:'KATO', sku:'2-111', cat:'直線', name:'94mm', price:413, type:'straight', length:94 },
+  { brand:'KATO', sku:'2-192', cat:'直線', name:'補助 97mm', price:385, type:'straight', length:97 },
+  { brand:'KATO', sku:'2-120', cat:'直線', name:'114mm', price:303, type:'straight', length:114 },
+  { brand:'KATO', sku:'2-140', cat:'直線', name:'123mm', price:316, type:'straight', length:123 },
+  { brand:'KATO', sku:'2-193', cat:'直線', name:'149mm', price:550, type:'straight', length:149 },
+  { brand:'KATO', sku:'2-130', cat:'直線', name:'174mm', price:330, type:'straight', length:174 },
+  { brand:'KATO', sku:'2-160', cat:'直線', name:'227mm', price:550, type:'straight', length:227 },
+  { brand:'KATO', sku:'2-150', cat:'直線', name:'246mm', price:358, type:'straight', length:246 },
+  { brand:'KATO', sku:'2-180', cat:'直線', name:'369mm', price:468, type:'straight', length:369 },
+  { brand:'KATO', sku:'2-141', cat:'直線', name:'PC 123mm', price:358, type:'straight', length:123 },
+  { brand:'KATO', sku:'2-152', cat:'直線', name:'PC 246mm', price:358, type:'straight', length:246 },
+  { brand:'KATO', sku:'2-181', cat:'直線', name:'PC 369mm', price:495, type:'straight', length:369 },
+  // ═══ HO曲線 ═══
+  { brand:'KATO', sku:'2-280', cat:'曲線', name:'R370 22.5°', price:358, type:'curve', radius:370, angle:22.5 },
+  { brand:'KATO', sku:'2-260', cat:'曲線', name:'R430 22.5°', price:358, type:'curve', radius:430, angle:22.5 },
+  { brand:'KATO', sku:'2-270', cat:'曲線', name:'R490 22.5°', price:413, type:'curve', radius:490, angle:22.5 },
+  { brand:'KATO', sku:'2-210', cat:'曲線', name:'R550 22.5°', price:426, type:'curve', radius:550, angle:22.5 },
+  { brand:'KATO', sku:'2-220', cat:'曲線', name:'R610 22.5°', price:440, type:'curve', radius:610, angle:22.5 },
+  { brand:'KATO', sku:'2-230', cat:'曲線', name:'R670 22.5°', price:454, type:'curve', radius:670, angle:22.5 },
+  { brand:'KATO', sku:'2-240', cat:'曲線', name:'R730 22.5°', price:468, type:'curve', radius:730, angle:22.5 },
+  { brand:'KATO', sku:'2-250', cat:'曲線', name:'R790 22.5°', price:440, type:'curve', radius:790, angle:22.5 },
+  { brand:'KATO', sku:'2-290', cat:'曲線', name:'R867 10°', price:550, type:'curve', radius:867, angle:10 },
+  { brand:'KATO', sku:'2-241', cat:'曲線', name:'PC R730 22.5°', price:468, type:'curve', radius:730, angle:22.5 },
+  { brand:'KATO', sku:'2-251', cat:'曲線', name:'PC R790 22.5°', price:481, type:'curve', radius:790, angle:22.5 },
+  { brand:'KATO', sku:'2-321', cat:'曲線', name:'PC R1546 11.25°', price:495, type:'curve', radius:1546, angle:11.25 },
+  { brand:'KATO', sku:'2-331', cat:'曲線', name:'PC R1606 11.25°', price:495, type:'curve', radius:1606, angle:11.25 },
+  // ═══ HO分岐 ═══
+  { brand:'KATO', sku:'2-840', cat:'分岐', name:'手動#4 左 R490', price:3520, type:'turnout', length:246, radius:490, angle:22.5 },
+  { brand:'KATO', sku:'2-841', cat:'分岐', name:'手動#4 右 R490', price:3520, type:'turnout', length:246, radius:490, angle:22.5 },
+  { brand:'KATO', sku:'2-852', cat:'分岐', name:'手動 左 R550', price:5500, type:'turnout', length:246, radius:550, angle:22.5 },
+  { brand:'KATO', sku:'2-853', cat:'分岐', name:'手動 右 R550', price:5500, type:'turnout', length:246, radius:550, angle:22.5 },
+  { brand:'KATO', sku:'2-860', cat:'分岐', name:'電動#6 左 R867', price:6820, type:'turnout', length:492, radius:867, angle:10 },
+  { brand:'KATO', sku:'2-861', cat:'分岐', name:'電動#6 右 R867', price:6820, type:'turnout', length:492, radius:867, angle:10 },
+  { brand:'KATO', sku:'2-862', cat:'分岐', name:'手動#6 左 R867', price:4400, type:'turnout', length:492, radius:867, angle:10 },
+  { brand:'KATO', sku:'2-863', cat:'分岐', name:'手動#6 右 R867', price:4400, type:'turnout', length:492, radius:867, angle:10 },
+  // ═══ HO特殊 ═══
+  { brand:'KATO', sku:'2-401', cat:'特殊', name:'交差 90°', price:1650, type:'crossing', length:60, angle:90 },
+  { brand:'KATO', sku:'2-170', cat:'特殊', name:'車止め 109mm', price:660, type:'bumper', length:109 },
+  { brand:'KATO', sku:'2-142', cat:'特殊', name:'リレーラー 123mm', price:990, type:'straight', length:123 },
+  { brand:'KATO', sku:'2-143', cat:'特殊', name:'アンカプラー 123mm', price:1650, type:'straight', length:123 },
+  { brand:'KATO', sku:'2-194', cat:'特殊', name:'スライド 232mm', price:3300, type:'straight', length:232 },
+  { brand:'KATO', sku:'2-001', cat:'特殊', name:'フレキ 900mm', price:1100, type:'straight', length:900 },
+  { brand:'KATO', sku:'2-151', cat:'特殊', name:'フィーダー 246mm', price:880, type:'straight', length:246 },
+  { brand:'KATO', sku:'2-153', cat:'特殊', name:'PCフィーダー 246mm', price:1540, type:'straight', length:246 },
+];
+
+// ===============================================
+// Geometry — correct curve math per spec
+// ===============================================
+
+// Local connectors for a piece definition.
+// Connector 0 = entry, Connector 1 = exit.
+// Straight: conn0 at (0,0) angle=180°, conn1 at (L,0) angle=0°
+// Curve (right bend, center at (0, -R)):
+//   conn0 at (0,0) angle=180°
+//   conn1 at (R*sin(θ), R*(cos(θ)-1)) angle=180°-θ
+function computeLocalConnectors(def) {
+  if (def.type === 'straight') {
+    const L = getVisualStraightLength(def.length);
+    if (def.double) {
+      const hs = DOUBLE_SPACING / 2;
+      return [
+        { x: 0, y: -hs, angle: 180 },  // inner entry
+        { x: L, y: -hs, angle: 0 },     // inner exit
+        { x: 0, y: hs, angle: 180 },    // outer entry
+        { x: L, y: hs, angle: 0 },      // outer exit
+      ];
+    }
+    return [
+      { x: 0, y: 0, angle: 180 },
+      { x: L, y: 0, angle: 0 },
+    ];
+  }
+  if (def.type === 'curve') {
+    if (def.double) {
+      // Inner and outer tracks have different radii
+      const Ri = getVisualCurveRadius(def.innerR || def.radius);
+      const Ro = getVisualCurveRadius(def.outerR || def.radius);
+      const theta = def.angle * Math.PI / 180;
+      const hs = DOUBLE_SPACING / 2;
+      // Inner track (smaller radius, closer to center of curvature)
+      // Center of curvature for inner track: (0, -(Ri + hs)) from piece origin
+      // But we define piece origin at midpoint between tracks at start
+      const iEx = Ri * Math.sin(theta);
+      const iEy = Ri * (Math.cos(theta) - 1);
+      const oEx = Ro * Math.sin(theta);
+      const oEy = Ro * (Math.cos(theta) - 1);
+      const exitAngle = -(def.angle);
+      return [
+        { x: 0, y: -hs, angle: 180 },                      // inner entry
+        { x: iEx, y: -hs + iEy, angle: exitAngle },         // inner exit
+        { x: 0, y: hs, angle: 180 },                        // outer entry
+        { x: oEx, y: hs + oEy, angle: exitAngle },           // outer exit
+      ];
+    }
+    const R = getVisualCurveRadius(def.radius || 730);
+    const theta = def.angle * Math.PI / 180;
+    const ex = R * Math.sin(theta);
+    const ey = R * (Math.cos(theta) - 1);
+    const exitAngle = -(def.angle);
+    return [
+      { x: 0, y: 0, angle: 180 },
+      { x: ex, y: ey, angle: exitAngle },
+    ];
+  }
+  if (def.type === 'turnout') {
+    // 3 connectors: entry, straight exit, diverging exit
+    const L = getVisualStraightLength(def.length || 246);
+    const R = getVisualCurveRadius(def.radius || 550);
+    const theta = (def.angle || 22.5) * Math.PI / 180;
+    const arcEndX = R * Math.sin(theta);
+    const arcEndY = R * (Math.cos(theta) - 1);
+    const exitAngle = -(def.angle || 22.5);
+    let dEx, dEy;
+    if (arcEndX < L * 0.7) {
+      // Curve+straight type (#6): extend straight from arc end to x=L
+      const extLen = (L - arcEndX) / Math.cos(theta);
+      dEx = arcEndX + extLen * Math.cos(theta);
+      dEy = arcEndY + extLen * (-Math.sin(theta));
+    } else {
+      // Full curve type (#4): exit at arc endpoint
+      dEx = arcEndX;
+      dEy = arcEndY;
+    }
+    return [
+      { x: 0, y: 0, angle: 180 },          // entry
+      { x: L, y: 0, angle: 0 },             // straight exit
+      { x: dEx, y: dEy, angle: exitAngle }, // diverging exit
+    ];
+  }
+  if (def.type === 'crossing') {
+    const L = getVisualStraightLength(def.length || 60);
+    // 4 connectors: two tracks crossing at 90°
+    return [
+      { x: 0, y: 0, angle: 180 },          // track A entry
+      { x: L, y: 0, angle: 0 },            // track A exit
+      { x: L/2, y: -L/2, angle: 90 },      // track B entry (top)
+      { x: L/2, y: L/2, angle: -90 },      // track B exit (bottom)
+    ];
+  }
+  if (def.type === 'bumper') {
+    const L = getVisualStraightLength(def.length || 109);
+    return [
+      { x: 0, y: 0, angle: 180 },
+      { x: L, y: 0, angle: 0 },
+    ];
+  }
+  return [];
+}
+
+// World connectors with rotation and flip applied
+function getWorldConnectors(piece) {
+  const local = computeLocalConnectors(piece.def);
+  const rad = piece.rotation * Math.PI / 180;
+  const flip = piece.flip ? -1 : 1;
+  return local.map(c => {
+    const lx = c.x;
+    const ly = c.y * flip;
+    const wx = piece.x + lx * Math.cos(rad) - ly * Math.sin(rad);
+    const wy = piece.y + lx * Math.sin(rad) + ly * Math.cos(rad);
+    const wa = c.angle * flip + piece.rotation;
+    return { x: wx, y: wy, angle: wa };
+  });
+}
+
+// ===============================================
+// State
+// ===============================================
+
+const state = {
+  pieces: [],
+  nextId: 1,
+  selected: null,
+  zoom: isMobile() ? 0.8 : 1.2,
+  panX: 0, panY: 0,
+  snapEnabled: true,
+  gridEnabled: false,
+  // Interaction state
+  dragging: null,        // { id, offsetX, offsetY } for piece move
+  panning: false,
+  panStart: null,
+  extending: null,       // { pieceId, connIdx, catalogIndex } for endpoint drag
+  extendChain: [],       // pieces placed during current extend gesture
+  // Palette drag
+  paletteDrag: null,     // { catIndex }
+  // Selected catalog piece (for extension)
+  selectedCatalogIndex: 0,
+  // Touch
+  lastPinchDist: null,
+  pinchCenter: null,
+  longPressTimer: null,
+  touchStartTime: 0,
+  touchMoved: false,
+  // Mobile drawer
+  mobileDrawerExpanded: false,
+};
+
+const SNAP_DIST = 15;
+const ENDPOINT_HANDLE_R = 8;
+
+// ── Undo/Redo ──
+const undoStack = [];
+const redoStack = [];
+const MAX_UNDO = 50;
+
+function snapshotState() {
+  return JSON.stringify(state.pieces.map(p => ({
+    catIndex: p.catIndex, x: p.x, y: p.y,
+    rotation: p.rotation, flip: p.flip,
+    connections: p.connections.map(c => ({...c})),
+  })));
+}
+
+function pushUndo() {
+  undoStack.push(snapshotState());
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0; // clear redo on new action
+}
+
+function restoreSnapshot(json) {
+  const data = JSON.parse(json);
+  state.pieces = [];
+  state.selected = null;
+  state.nextId = 1;
+  svgEl.querySelector('#pieces-layer').innerHTML = '';
+  for (const pd of data) {
+    const piece = addPiece(pd.catIndex, pd.x, pd.y);
+    if (piece) {
+      piece.rotation = pd.rotation || 0;
+      piece.flip = pd.flip || false;
+      piece.connections = pd.connections || [];
+      refreshPieceSVG(piece);
+    }
+  }
+  drawEndpointHandles();
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(snapshotState());
+  restoreSnapshot(undoStack.pop());
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(snapshotState());
+  restoreSnapshot(redoStack.pop());
+}
+
+// ── DOM refs ──
+const svgEl = document.getElementById('track-svg');
+const canvasWrap = document.getElementById('canvas-wrap');
+const gridCanvas = document.getElementById('grid-canvas');
+const gridCtx = gridCanvas.getContext('2d');
+const paletteEl = document.getElementById('palette');
+const dragGhost = document.getElementById('drag-ghost');
+const zoomLabel = document.getElementById('zoom-label');
+const mobileDrawer = document.getElementById('mobile-drawer');
+
+// ===============================================
+// SVG Drawing
+// ===============================================
+
+function buildSVGGroup(piece, isPreview) {
+  const def = piece.def;
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  if (!isPreview) {
+    g.setAttribute('data-id', piece.id);
+    g.classList.add('track-piece');
+  }
+
+  const color = getPieceColor(def);
+  const fillColor = color + '26';
+  const hw = TRACK_W / 2;
+
+  if (def.type === 'straight') {
+    const L = getVisualStraightLength(def.length);
+    if (def.double) {
+      // Double track: two separate parallel rails
+      const hs = DOUBLE_SPACING / 2;
+      for (const dy of [-hs, hs]) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', 0); rect.setAttribute('y', dy - hw);
+        rect.setAttribute('width', L); rect.setAttribute('height', TRACK_W);
+        rect.setAttribute('fill', fillColor); rect.setAttribute('stroke', color);
+        rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('rx', '2');
+        g.appendChild(rect);
+      }
+    } else {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', 0); rect.setAttribute('y', -hw);
+      rect.setAttribute('width', L); rect.setAttribute('height', TRACK_W);
+      rect.setAttribute('fill', fillColor); rect.setAttribute('stroke', color);
+      rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('rx', '2');
+      g.appendChild(rect);
+    }
+  } else if (def.type === 'curve') {
+    const drawArc = (R, trackWidth, offsetX, offsetY) => {
+      offsetX = offsetX || 0;
+      offsetY = offsetY || 0;
+      const theta = def.angle * Math.PI / 180;
+      const thw = trackWidth / 2;
+      const cx = offsetX, cy = offsetY - R;
+      const startAngle = Math.PI / 2;
+      const endAngle = Math.PI / 2 - theta;
+
+      const outerR = R + thw;
+      const innerR = Math.max(1, R - thw);
+
+      const ox1 = cx + outerR * Math.cos(startAngle);
+      const oy1 = cy + outerR * Math.sin(startAngle);
+      const ox2 = cx + outerR * Math.cos(endAngle);
+      const oy2 = cy + outerR * Math.sin(endAngle);
+      const ix1 = cx + innerR * Math.cos(endAngle);
+      const iy1 = cy + innerR * Math.sin(endAngle);
+      const ix2 = cx + innerR * Math.cos(startAngle);
+      const iy2 = cy + innerR * Math.sin(startAngle);
+
+      const largeArc = def.angle > 180 ? 1 : 0;
+      const d = `M ${ox1} ${oy1} A ${outerR} ${outerR} 0 ${largeArc} 0 ${ox2} ${oy2} L ${ix1} ${iy1} A ${innerR} ${innerR} 0 ${largeArc} 1 ${ix2} ${iy2} Z`;
+
+      const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathEl.setAttribute('d', d);
+      pathEl.setAttribute('fill', fillColor);
+      pathEl.setAttribute('stroke', color);
+      pathEl.setAttribute('stroke-width', '1.5');
+      g.appendChild(pathEl);
+    };
+
+    if (def.double) {
+      // Draw two separate parallel curved rails
+      const Ri = getVisualCurveRadius(def.innerR || def.radius);
+      const Ro = getVisualCurveRadius(def.outerR || def.radius);
+      const hs = DOUBLE_SPACING / 2;
+      // Inner rail: center of curvature at (0, -(Ri+hs)), arc drawn at y offset -hs
+      drawArc(Ri, TRACK_W, 0, -hs);
+      // Outer rail: center of curvature at (0, -(Ro-hs)), arc drawn at y offset +hs
+      drawArc(Ro, TRACK_W, 0, hs);
+    } else {
+      drawArc(getVisualCurveRadius(def.radius || 730), TRACK_W);
+    }
+  } else if (def.type === 'turnout') {
+    // Draw straight route + diverging arc
+    const L = getVisualStraightLength(def.length || 246);
+    // Straight route
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', 0); rect.setAttribute('y', -hw);
+    rect.setAttribute('width', L); rect.setAttribute('height', TRACK_W);
+    rect.setAttribute('fill', fillColor); rect.setAttribute('stroke', color);
+    rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('rx', '2');
+    g.appendChild(rect);
+    // Diverging route (arc + optional straight extension)
+    const R = getVisualCurveRadius(def.radius || 550);
+    const theta = (def.angle || 22.5) * Math.PI / 180;
+    const thw = TRACK_W / 2;
+    const cx = 0, cy = -R;
+    const startAngle = Math.PI / 2;
+    const endAngle = Math.PI / 2 - theta;
+    const outerR = R + thw, innerR = Math.max(1, R - thw);
+    const ox1 = cx + outerR * Math.cos(startAngle), oy1 = cy + outerR * Math.sin(startAngle);
+    const ox2 = cx + outerR * Math.cos(endAngle), oy2 = cy + outerR * Math.sin(endAngle);
+    const ix1 = cx + innerR * Math.cos(endAngle), iy1 = cy + innerR * Math.sin(endAngle);
+    const ix2 = cx + innerR * Math.cos(startAngle), iy2 = cy + innerR * Math.sin(startAngle);
+    const arcEndX = R * Math.sin(theta);
+    const hasStraightExt = arcEndX < L * 0.7;
+    if (hasStraightExt) {
+      // Curve+straight type: draw arc, then straight extension
+      // Arc portion
+      const dArc = `M ${ox1} ${oy1} A ${outerR} ${outerR} 0 0 0 ${ox2} ${oy2} L ${ix1} ${iy1} A ${innerR} ${innerR} 0 0 1 ${ix2} ${iy2} Z`;
+      const arcEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      arcEl.setAttribute('d', dArc);
+      arcEl.setAttribute('fill', fillColor); arcEl.setAttribute('stroke', color);
+      arcEl.setAttribute('stroke-width', '1.5');
+      g.appendChild(arcEl);
+      // Straight extension from arc end
+      const aeX = R * Math.sin(theta);
+      const aeY = R * (Math.cos(theta) - 1);
+      const extLen = (L - aeX) / Math.cos(theta);
+      const dirX = Math.cos(theta), dirY = -Math.sin(theta);
+      const perpX = -dirY, perpY = dirX; // perpendicular (left side)
+      const sx1 = aeX + perpX * thw, sy1 = aeY + perpY * thw;
+      const sx2 = aeX + extLen * dirX + perpX * thw, sy2 = aeY + extLen * dirY + perpY * thw;
+      const sx3 = aeX + extLen * dirX - perpX * thw, sy3 = aeY + extLen * dirY - perpY * thw;
+      const sx4 = aeX - perpX * thw, sy4 = aeY - perpY * thw;
+      const dExt = `M ${sx1} ${sy1} L ${sx2} ${sy2} L ${sx3} ${sy3} L ${sx4} ${sy4} Z`;
+      const extEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      extEl.setAttribute('d', dExt);
+      extEl.setAttribute('fill', fillColor); extEl.setAttribute('stroke', color);
+      extEl.setAttribute('stroke-width', '1.5');
+      g.appendChild(extEl);
+    } else {
+      // Full curve type: just the arc
+      const d = `M ${ox1} ${oy1} A ${outerR} ${outerR} 0 0 0 ${ox2} ${oy2} L ${ix1} ${iy1} A ${innerR} ${innerR} 0 0 1 ${ix2} ${iy2} Z`;
+      const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathEl.setAttribute('d', d);
+      pathEl.setAttribute('fill', fillColor); pathEl.setAttribute('stroke', color);
+      pathEl.setAttribute('stroke-width', '1.5');
+      g.appendChild(pathEl);
+    }
+  } else if (def.type === 'crossing') {
+    const L = getVisualStraightLength(def.length || 60);
+    // Track A: horizontal
+    const rectA = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rectA.setAttribute('x', 0); rectA.setAttribute('y', -hw);
+    rectA.setAttribute('width', L); rectA.setAttribute('height', TRACK_W);
+    rectA.setAttribute('fill', fillColor); rectA.setAttribute('stroke', color);
+    rectA.setAttribute('stroke-width', '1.5'); rectA.setAttribute('rx', '2');
+    g.appendChild(rectA);
+    // Track B: vertical (crossing at center)
+    const rectB = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rectB.setAttribute('x', L/2 - hw); rectB.setAttribute('y', -L/2);
+    rectB.setAttribute('width', TRACK_W); rectB.setAttribute('height', L);
+    rectB.setAttribute('fill', fillColor); rectB.setAttribute('stroke', color);
+    rectB.setAttribute('stroke-width', '1.5'); rectB.setAttribute('rx', '2');
+    g.appendChild(rectB);
+  } else if (def.type === 'bumper') {
+    const L = getVisualStraightLength(def.length || 109);
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', 0); rect.setAttribute('y', -hw);
+    rect.setAttribute('width', L); rect.setAttribute('height', TRACK_W);
+    rect.setAttribute('fill', fillColor); rect.setAttribute('stroke', color);
+    rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('rx', '2');
+    g.appendChild(rect);
+    // Bumper end cap
+    const cap = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    cap.setAttribute('x', L - 3); cap.setAttribute('y', -hw - 2);
+    cap.setAttribute('width', 3); cap.setAttribute('height', TRACK_W + 4);
+    cap.setAttribute('fill', color); cap.setAttribute('stroke', 'none');
+    g.appendChild(cap);
+  }
+
+  // Label
+  if (def.type === 'straight' || def.type === 'curve' || def.type === 'turnout' || def.type === 'crossing' || def.type === 'bumper') {
+    const label = getPieceLabel(def);
+    if (label) {
+      const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textEl.setAttribute('fill', color);
+      textEl.setAttribute('font-family', 'Lato, Noto Sans JP, sans-serif');
+      textEl.setAttribute('text-anchor', 'middle');
+      textEl.setAttribute('dominant-baseline', 'central');
+      textEl.setAttribute('pointer-events', 'none');
+      textEl.setAttribute('font-size', '6');
+
+      if (def.type === 'straight' || def.type === 'turnout' || def.type === 'crossing' || def.type === 'bumper') {
+        const L = getVisualStraightLength(def.length || 60);
+        textEl.setAttribute('x', L / 2);
+        textEl.setAttribute('y', 0);
+      } else {
+        const R = getVisualCurveRadius(def.radius || 730);
+        const theta = def.angle * Math.PI / 180;
+        const midAngle = Math.PI / 2 - theta / 2;
+        const cx = 0, cy = -R;
+        const mx = cx + R * Math.cos(midAngle);
+        const my = cy + R * Math.sin(midAngle);
+        textEl.setAttribute('x', mx);
+        textEl.setAttribute('y', my);
+        const textRot = -(theta / 2) * 180 / Math.PI;
+        textEl.setAttribute('transform', `rotate(${textRot}, ${mx}, ${my})`);
+      }
+      textEl.textContent = label;
+      g.appendChild(textEl);
+    }
+  }
+
+  if (!isPreview) {
+    updatePieceTransform(g, piece);
+  }
+  return g;
+}
+
+function updatePieceTransform(g, piece) {
+  let transform = `translate(${piece.x},${piece.y}) rotate(${piece.rotation})`;
+  if (piece.flip) transform += ` scale(1,-1)`;
+  g.setAttribute('transform', transform);
+}
+
+// ===============================================
+// Canvas
+// ===============================================
+
+function resizeCanvas() {
+  const rect = canvasWrap.getBoundingClientRect();
+  gridCanvas.width = rect.width;
+  gridCanvas.height = rect.height;
+  svgEl.setAttribute('width', rect.width);
+  svgEl.setAttribute('height', rect.height);
+  updateView();
+}
+
+let _endpointRedrawTimer = null;
+function updateView() {
+  const rect = canvasWrap.getBoundingClientRect();
+  const vbX = -state.panX / state.zoom;
+  const vbY = -state.panY / state.zoom;
+  const vbW = rect.width / state.zoom;
+  const vbH = rect.height / state.zoom;
+  svgEl.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+  zoomLabel.textContent = state.zoom.toFixed(2) + 'x';
+  drawGrid();
+  // Debounce endpoint handle redraw during zoom (handles scale with zoom)
+  if (_endpointRedrawTimer) clearTimeout(_endpointRedrawTimer);
+  _endpointRedrawTimer = setTimeout(drawEndpointHandles, 100);
+}
+
+function drawGrid() {
+  const w = gridCanvas.width, h = gridCanvas.height;
+  gridCtx.clearRect(0, 0, w, h);
+  if (!state.gridEnabled) return;
+  const gridSize = 50;
+  const z = state.zoom;
+  const offX = state.panX % (gridSize * z);
+  const offY = state.panY % (gridSize * z);
+  gridCtx.strokeStyle = '#e0e0e0';
+  gridCtx.lineWidth = 0.5;
+  gridCtx.beginPath();
+  for (let x = offX; x < w; x += gridSize * z) { gridCtx.moveTo(x, 0); gridCtx.lineTo(x, h); }
+  for (let y = offY; y < h; y += gridSize * z) { gridCtx.moveTo(0, y); gridCtx.lineTo(w, y); }
+  gridCtx.stroke();
+}
+
+function screenToWorld(sx, sy) {
+  const rect = canvasWrap.getBoundingClientRect();
+  return {
+    x: (sx - rect.left - state.panX) / state.zoom,
+    y: (sy - rect.top - state.panY) / state.zoom,
+  };
+}
+
+// ===============================================
+// Piece management
+// ===============================================
+
+function addPiece(catIndex, worldX, worldY) {
+  const def = CATALOG[catIndex];
+  if (def.type === 'accessory') return null;
+  const piece = {
+    id: state.nextId++,
+    def,
+    catIndex,
+    x: worldX,
+    y: worldY,
+    rotation: 0,
+    flip: false,
+    connections: [],
+  };
+  state.pieces.push(piece);
+  const g = buildSVGGroup(piece, false);
+  svgEl.querySelector('#pieces-layer').appendChild(g);
+  return piece;
+}
+
+function removePiece(id) {
+  pushUndo();
+  const idx = state.pieces.findIndex(p => p.id === id);
+  if (idx < 0) return;
+  const piece = state.pieces[idx];
+  disconnectPiece(piece);
+  state.pieces.splice(idx, 1);
+  const g = svgEl.querySelector(`[data-id="${id}"]`);
+  if (g) g.remove();
+  if (state.selected === id) {
+    state.selected = null;
+    drawEndpointHandles();
+  }
+}
+
+function selectPiece(id) {
+  // Remove old selection highlight
+  svgEl.querySelectorAll('.sel-highlight').forEach(h => h.remove());
+  state.selected = id;
+  drawEndpointHandles();
+  if (id == null) return;
+
+  const piece = state.pieces.find(p => p.id === id);
+  const g = svgEl.querySelector(`[data-id="${id}"]`);
+  if (!g || !piece) return;
+
+  const bbox = getBBox(piece);
+  const pad = 4;
+  const highlight = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  highlight.setAttribute('x', bbox.x - pad);
+  highlight.setAttribute('y', bbox.y - pad);
+  highlight.setAttribute('width', bbox.w + pad * 2);
+  highlight.setAttribute('height', bbox.h + pad * 2);
+  highlight.setAttribute('fill', 'none');
+  highlight.setAttribute('stroke', '#ed8f57');
+  highlight.setAttribute('stroke-width', '2');
+  highlight.setAttribute('stroke-dasharray', '6,3');
+  highlight.setAttribute('rx', '3');
+  highlight.classList.add('sel-highlight');
+  g.appendChild(highlight);
+  // Bring to front
+  g.parentElement.appendChild(g);
+}
+
+function getBBox(piece) {
+  const def = piece.def;
+  if (def.type === 'straight') {
+    const L = getVisualStraightLength(def.length);
+    const hw = def.double ? (DOUBLE_SPACING / 2 + TRACK_W / 2) : TRACK_W / 2;
+    return { x: 0, y: -hw, w: L, h: hw * 2 };
+  }
+  if (def.type === 'curve') {
+    const R = def.double ? getVisualCurveRadius(def.outerR || def.radius) : getVisualCurveRadius(def.radius || 730);
+    const theta = def.angle * Math.PI / 180;
+    const tw = def.double ? (DOUBLE_SPACING / 2 + TRACK_W / 2) : TRACK_W / 2;
+    return {
+      x: -tw,
+      y: R * (Math.cos(theta) - 1) - tw,
+      w: R * Math.sin(theta) + tw * 2,
+      h: -(R * (Math.cos(theta) - 1)) + tw * 2
+    };
+  }
+  if (def.type === 'crossing') {
+    const L = getVisualStraightLength(def.length || 60);
+    return { x: 0, y: -L/2, w: L, h: L };
+  }
+  if (def.type === 'turnout' || def.type === 'bumper') {
+    const L = getVisualStraightLength(def.length || 60);
+    const hw = TRACK_W / 2;
+    return { x: 0, y: -hw - 10, w: L, h: (hw + 10) * 2 };
+  }
+  return { x: 0, y: 0, w: 50, h: 20 };
+}
+
+// ===============================================
+// Endpoint handles — the core v2 UI
+// ===============================================
+
+function drawEndpointHandles() {
+  let overlay = svgEl.querySelector('#endpoint-overlay');
+  if (overlay) overlay.innerHTML = '';
+
+  // Scale handles so they have consistent screen size
+  const invZoom = 1 / state.zoom;
+
+  for (const piece of state.pieces) {
+    const conns = getWorldConnectors(piece);
+    conns.forEach((c, ci) => {
+      const isConnected = piece.connections.some(cn => cn.connIdx === ci);
+      if (isConnected) return;
+
+      const isSelected = piece.id === state.selected;
+      const r = (isSelected ? 10 : 6) * invZoom;
+      const strokeW = (isSelected ? 2 : 1) * invZoom;
+      const fontSize = (isSelected ? 12 : 8) * invZoom;
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.classList.add('endpoint-handle');
+      g.setAttribute('data-piece-id', piece.id);
+      g.setAttribute('data-conn-idx', ci);
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', c.x);
+      circle.setAttribute('cy', c.y);
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', isSelected ? '#2196F3' : '#aaa');
+      circle.setAttribute('opacity', isSelected ? '0.9' : '0.6');
+      circle.setAttribute('stroke', '#fff');
+      circle.setAttribute('stroke-width', strokeW);
+      g.appendChild(circle);
+
+      const plus = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      plus.setAttribute('x', c.x);
+      plus.setAttribute('y', c.y);
+      plus.setAttribute('text-anchor', 'middle');
+      plus.setAttribute('dominant-baseline', 'central');
+      plus.setAttribute('font-size', fontSize);
+      plus.setAttribute('fill', '#fff');
+      plus.setAttribute('font-weight', '700');
+      plus.setAttribute('pointer-events', 'none');
+      plus.textContent = '+';
+      g.appendChild(plus);
+
+      overlay.appendChild(g);
+    });
+  }
+}
+
+// ===============================================
+// Snap & Connection logic
+// ===============================================
+
+function findSnapTarget(piece) {
+  const myConns = getWorldConnectors(piece);
+  let bestDist = SNAP_DIST;
+  let bestSnap = null;
+
+  for (const other of state.pieces) {
+    if (other.id === piece.id) continue;
+    const otherConns = getWorldConnectors(other);
+    for (let mi = 0; mi < myConns.length; mi++) {
+      if (piece.connections.some(c => c.connIdx === mi && c.pieceId !== other.id)) continue;
+      for (let oi = 0; oi < otherConns.length; oi++) {
+        if (other.connections.some(c => c.connIdx === oi)) continue;
+        const dx = myConns[mi].x - otherConns[oi].x;
+        const dy = myConns[mi].y - otherConns[oi].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestSnap = { myConn: mi, otherPiece: other, otherConn: oi, dist };
+        }
+      }
+    }
+  }
+  return bestSnap;
+}
+
+// Snap piece using correct connector alignment from spec:
+// B.rotation = A_conn1_worldAngle + 180° - B_conn0_localAngle
+function snapPiece(piece, snap) {
+  const otherConns = getWorldConnectors(snap.otherPiece);
+  const target = otherConns[snap.otherConn];
+
+  const myLocal = computeLocalConnectors(piece.def);
+  const myConn = myLocal[snap.myConn];
+  const flipMul = piece.flip ? -1 : 1;
+
+  // Rotation: align my connector's outgoing direction with target's incoming direction
+  const desiredOutAngle = target.angle + 180;
+  const myLocalAngle = myConn.angle * flipMul;
+  piece.rotation = desiredOutAngle - myLocalAngle;
+  piece.rotation = ((piece.rotation % 360) + 360) % 360;
+
+  // Position: align connector positions
+  const updatedConns = getWorldConnectors(piece);
+  const dx = target.x - updatedConns[snap.myConn].x;
+  const dy = target.y - updatedConns[snap.myConn].y;
+  piece.x += dx;
+  piece.y += dy;
+
+  // Record primary connection
+  piece.connections = piece.connections.filter(c => c.connIdx !== snap.myConn);
+  snap.otherPiece.connections = snap.otherPiece.connections.filter(c => c.connIdx !== snap.otherConn);
+  piece.connections.push({ pieceId: snap.otherPiece.id, connIdx: snap.myConn, otherConnIdx: snap.otherConn });
+  snap.otherPiece.connections.push({ pieceId: piece.id, connIdx: snap.otherConn, otherConnIdx: snap.myConn });
+
+  // Auto-connect remaining nearby connectors (for double-track pairing)
+  autoConnectNearby(piece);
+}
+
+function autoConnectNearby(piece) {
+  const myConns = getWorldConnectors(piece);
+  for (let mi = 0; mi < myConns.length; mi++) {
+    if (piece.connections.some(c => c.connIdx === mi)) continue;
+    for (const other of state.pieces) {
+      if (other.id === piece.id) continue;
+      const otherConns = getWorldConnectors(other);
+      for (let oi = 0; oi < otherConns.length; oi++) {
+        if (other.connections.some(c => c.connIdx === oi)) continue;
+        const dx = myConns[mi].x - otherConns[oi].x;
+        const dy = myConns[mi].y - otherConns[oi].y;
+        if (Math.sqrt(dx * dx + dy * dy) < 3) {
+          piece.connections.push({ pieceId: other.id, connIdx: mi, otherConnIdx: oi });
+          other.connections.push({ pieceId: piece.id, connIdx: oi, otherConnIdx: mi });
+        }
+      }
+    }
+  }
+}
+
+function disconnectPiece(piece) {
+  for (const conn of piece.connections) {
+    const other = state.pieces.find(p => p.id === conn.pieceId);
+    if (other) {
+      other.connections = other.connections.filter(c => c.pieceId !== piece.id);
+    }
+  }
+  piece.connections = [];
+}
+
+function refreshPieceSVG(piece) {
+  const old = svgEl.querySelector(`[data-id="${piece.id}"]`);
+  if (old) {
+    const g = buildSVGGroup(piece, false);
+    old.replaceWith(g);
+    if (state.selected === piece.id) selectPiece(piece.id);
+  }
+}
+
+function reconnectAll() {
+  for (const piece of state.pieces) piece.connections = [];
+  for (let i = 0; i < state.pieces.length; i++) {
+    const pi = state.pieces[i];
+    const connsI = getWorldConnectors(pi);
+    for (let j = i + 1; j < state.pieces.length; j++) {
+      const pj = state.pieces[j];
+      const connsJ = getWorldConnectors(pj);
+      for (let ci = 0; ci < connsI.length; ci++) {
+        if (pi.connections.some(c => c.connIdx === ci)) continue;
+        for (let cj = 0; cj < connsJ.length; cj++) {
+          if (pj.connections.some(c => c.connIdx === cj)) continue;
+          const dx = connsI[ci].x - connsJ[cj].x;
+          const dy = connsI[ci].y - connsJ[cj].y;
+          if (Math.sqrt(dx * dx + dy * dy) < 2) {
+            pi.connections.push({ pieceId: pj.id, connIdx: ci, otherConnIdx: cj });
+            pj.connections.push({ pieceId: pi.id, connIdx: cj, otherConnIdx: ci });
+          }
+        }
+      }
+    }
+  }
+}
+
+// ===============================================
+// Extension — place piece at endpoint
+// ===============================================
+
+function extendFromEndpoint(sourcePieceId, sourceConnIdx, targetWorldX, targetWorldY) {
+  pushUndo();
+  const catIdx = state.selectedCatalogIndex;
+  if (catIdx == null) { return null; }
+  const def = CATALOG[catIdx];
+  if (!def || def.type === 'accessory') { console.warn('extendFrom: bad def'); return null; }
+
+  const sourcePiece = state.pieces.find(p => p.id === sourcePieceId);
+  if (!sourcePiece) { console.warn('extendFrom: source not found'); return null; }
+
+  // Check source connector is still open
+  if (sourcePiece.connections.some(c => c.connIdx === sourceConnIdx)) {
+    console.warn('extendFrom: source conn', sourceConnIdx, 'already connected');
+    return null;
+  }
+
+  const sourceConns = getWorldConnectors(sourcePiece);
+  const outConn = sourceConns[sourceConnIdx];
+  if (!outConn) return null;
+
+  const newPiece = addPiece(catIdx, 0, 0);
+  if (!newPiece) return null;
+
+  const newLocal = computeLocalConnectors(newPiece.def);
+
+  // Determine which connector of the new piece to attach (conn 0 = entry)
+  const attachConn = 0;
+
+  // Base rotation: align new piece's conn0 with source's outConn
+  const desiredAngle = outConn.angle + 180;
+  const localAngle = newLocal[attachConn].angle;
+  newPiece.rotation = desiredAngle - localAngle;
+  newPiece.rotation = ((newPiece.rotation % 360) + 360) % 360;
+
+  // For curves, determine flip based on drag direction (cross product)
+  // outConn.angle IS the forward direction (away from piece = direction of travel)
+  if (def.type === 'curve') {
+    const dx = targetWorldX - outConn.x;
+    const dy = targetWorldY - outConn.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 0.1) {
+      const fwdRad = outConn.angle * Math.PI / 180;
+      const fwdX = Math.cos(fwdRad);
+      const fwdY = Math.sin(fwdRad);
+      // Normalized cross product: positive = left curve (flip), negative = right curve
+      const cross = (fwdX * dy - fwdY * dx) / len;
+      // Dead zone: if drag is roughly forward (|cross| < sin(15°)≈0.26), default no flip
+      newPiece.flip = cross > 0.26;
+    }
+    // Recompute rotation with flip
+    const flipMul = newPiece.flip ? -1 : 1;
+    newPiece.rotation = desiredAngle - (newLocal[attachConn].angle * flipMul);
+    newPiece.rotation = ((newPiece.rotation % 360) + 360) % 360;
+  }
+
+  // Position: align conn0 of newPiece to outConn
+  const flipMul = newPiece.flip ? -1 : 1;
+  const rad = newPiece.rotation * Math.PI / 180;
+  const lx = newLocal[attachConn].x;
+  const ly = newLocal[attachConn].y * flipMul;
+  const wcx = lx * Math.cos(rad) - ly * Math.sin(rad);
+  const wcy = lx * Math.sin(rad) + ly * Math.cos(rad);
+  newPiece.x = outConn.x - wcx;
+  newPiece.y = outConn.y - wcy;
+
+  // Record connection (conn0 → source)
+  newPiece.connections.push({ pieceId: sourcePiece.id, connIdx: attachConn, otherConnIdx: sourceConnIdx });
+  sourcePiece.connections.push({ pieceId: newPiece.id, connIdx: sourceConnIdx, otherConnIdx: attachConn });
+
+  // Auto-connect remaining connectors (double-track pairing + circle closing)
+  autoConnectNearby(newPiece);
+
+  refreshPieceSVG(newPiece);
+  drawEndpointHandles();
+
+  return newPiece;
+}
+
+// ===============================================
+// Hit testing
+// ===============================================
+
+function hitTest(worldX, worldY) {
+  for (let i = state.pieces.length - 1; i >= 0; i--) {
+    const piece = state.pieces[i];
+    const rad = -piece.rotation * Math.PI / 180;
+    const dx = worldX - piece.x;
+    const dy = worldY - piece.y;
+    const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+    const flipLy = piece.flip ? -ly : ly;
+    const bbox = getBBox(piece);
+    const margin = 10;
+    if (lx >= bbox.x - margin && lx <= bbox.x + bbox.w + margin &&
+        flipLy >= bbox.y - margin && flipLy <= bbox.y + bbox.h + margin) {
+      return piece;
+    }
+  }
+  return null;
+}
+
+// Hit test endpoint handles (returns { pieceId, connIdx } or null)
+// Uses screen-space distance so hit area is consistent regardless of zoom
+function hitTestEndpoint(worldX, worldY) {
+  // 12px screen-space hit area for handles
+  const screenHitDist = 14;
+  const worldHitDist = screenHitDist / state.zoom;
+  let best = null;
+  let bestDist = worldHitDist;
+
+  for (const piece of state.pieces) {
+    const conns = getWorldConnectors(piece);
+    for (let ci = 0; ci < conns.length; ci++) {
+      const isConnected = piece.connections.some(cn => cn.connIdx === ci);
+      if (isConnected) continue;
+      const dx = worldX - conns[ci].x;
+      const dy = worldY - conns[ci].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { pieceId: piece.id, connIdx: ci };
+      }
+    }
+  }
+  return best;
+}
+
+// ===============================================
+// Palette
+// ===============================================
+
+function buildPalette() {
+  const cats = {};
+  const catOrder = [];
+  CATALOG.forEach((item, i) => {
+    if (item.type === 'accessory') return;
+    if (!cats[item.cat]) { cats[item.cat] = []; catOrder.push(item.cat); }
+    cats[item.cat].push({ item, index: i });
+  });
+
+  const catColorMap = {
+    '直線': '#4CAF50', '曲線': '#2196F3',
+    '複線直線': '#9C27B0', '複線曲線': '#9C27B0',
+    '分岐': '#FF9800', '特殊': '#607D8B',
+  };
+
+  for (const cat of catOrder) {
+    const h3 = document.createElement('h3');
+    const dot = document.createElement('span');
+    dot.className = 'cat-dot';
+    dot.style.backgroundColor = catColorMap[cat] || '#607D8B';
+    h3.appendChild(dot);
+    h3.appendChild(document.createTextNode(cat));
+    paletteEl.appendChild(h3);
+
+    for (const { item, index } of cats[cat]) {
+        const div = document.createElement('div');
+        div.className = 'palette-item';
+        if (index === state.selectedCatalogIndex) div.classList.add('selected');
+        div.dataset.catIndex = index;
+
+        const colorBar = document.createElement('div');
+        colorBar.className = 'piece-color-bar';
+        colorBar.style.backgroundColor = getPieceColor(item);
+        div.appendChild(colorBar);
+
+        const prevSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        prevSvg.setAttribute('class', 'palette-preview');
+        prevSvg.setAttribute('viewBox', getPreviewViewBox(item));
+        const tmpPiece = { def: item, x: 0, y: 0, rotation: 0, flip: false, connections: [] };
+        prevSvg.appendChild(buildSVGGroup(tmpPiece, true));
+        div.appendChild(prevSvg);
+
+        const label = document.createElement('div');
+        label.className = 'palette-label';
+        const bi = getBrandBadge(item);
+        // Show badge + size only (brand+variant is in the badge)
+        let sizeLabel = '';
+        if (item.type === 'straight') sizeLabel = item.length + 'mm';
+        else if (item.type === 'curve') {
+          if (item.double) sizeLabel = 'R' + item.innerR + '/' + item.outerR + ' ' + item.angle + '°';
+          else sizeLabel = 'R' + item.radius + ' ' + item.angle + '°';
+        }
+        else if (item.type === 'turnout') sizeLabel = item.name || '';
+        else sizeLabel = item.name;
+        const priceHtml = item.brand === 'ArcPath' ? `<br><span class="price">&yen;${item.price.toLocaleString()}</span>` : '';
+        label.innerHTML = `<span style="display:inline-block;background:${bi.color};color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:2px;margin-bottom:2px">${bi.text}</span><br>${sizeLabel}${priceHtml}`;
+        div.appendChild(label);
+
+        let dragStartX, dragStartY, isDragging = false;
+
+        div.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          e.preventDefault();
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          isDragging = false;
+
+          const onMove = (me) => {
+            if (!isDragging && Math.hypot(me.clientX - dragStartX, me.clientY - dragStartY) > 5) {
+              isDragging = true;
+              state.paletteDrag = { catIndex: index };
+              dragGhost.style.display = 'block';
+            }
+            if (isDragging) {
+              dragGhost.style.left = (me.clientX + 10) + 'px';
+              dragGhost.style.top = (me.clientY + 10) + 'px';
+            }
+          };
+          const onUp = (me) => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            if (isDragging && state.paletteDrag) {
+              dragGhost.style.display = 'none';
+              pushUndo();
+              const world = screenToWorld(me.clientX, me.clientY);
+              const piece = addPiece(state.paletteDrag.catIndex, world.x, world.y);
+              if (piece && state.snapEnabled) {
+                const snap = findSnapTarget(piece);
+                if (snap) { snapPiece(piece, snap); refreshPieceSVG(piece); }
+              }
+              selectPiece(piece ? piece.id : null);
+              state.paletteDrag = null;
+            } else {
+              selectCatalogPiece(index);
+            }
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+        });
+
+        div.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          selectCatalogPiece(index);
+        }, { passive: false });
+
+        paletteEl.appendChild(div);
+      }
+    }
+}
+
+function getPreviewViewBox(def) {
+  if (def.type === 'straight') {
+    const L = getVisualStraightLength(def.length);
+    const hw = def.double ? (DOUBLE_SPACING + TRACK_W + 4) : (TRACK_W + 4);
+    return `-2 ${-hw / 2 - 2} ${L + 4} ${hw + 4}`;
+  }
+  if (def.type === 'curve') {
+    const R = getVisualCurveRadius(def.radius || 730);
+    const theta = def.angle * Math.PI / 180;
+    const endX = R * Math.sin(theta);
+    const endY = -(R * (Math.cos(theta) - 1));
+    return `-15 ${-endY - 20} ${Math.max(endX + 30, 50)} ${endY + 30}`;
+  }
+  return '0 0 100 40';
+}
+
+function selectCatalogPiece(index) {
+  state.selectedCatalogIndex = index;
+  // Update desktop palette highlight
+  paletteEl.querySelectorAll('.palette-item').forEach(el => {
+    el.classList.toggle('selected', parseInt(el.dataset.catIndex) === index);
+  });
+  // Update mobile drawer highlight
+  document.querySelectorAll('#mobile-drawer-content .palette-grid-item').forEach(el => {
+    el.classList.toggle('selected', parseInt(el.dataset.catIndex) === index);
+  });
+}
+
+// ── Mobile drawer ──
+function buildMobileDrawer() {
+  const content = document.getElementById('mobile-drawer-content');
+  const cats = {};
+  const catOrder = [];
+  CATALOG.forEach((item, i) => {
+    if (item.type === 'accessory') return;
+    if (!cats[item.cat]) { cats[item.cat] = []; catOrder.push(item.cat); }
+    cats[item.cat].push({ item, index: i });
+  });
+
+  const catColorMap = {
+    '直線': '#4CAF50', '曲線': '#2196F3',
+    '複線直線': '#9C27B0', '複線曲線': '#9C27B0',
+    '分岐': '#FF9800', '特殊': '#607D8B',
+  };
+
+  for (const cat of catOrder) {
+    const header = document.createElement('div');
+    header.className = 'palette-cat-header';
+    header.innerHTML = `<span class="cat-dot-m" style="background:${catColorMap[cat]||'#607D8B'}"></span>${cat}`;
+    content.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'palette-grid';
+
+    for (const { item, index } of cats[cat]) {
+      const el = document.createElement('div');
+      el.className = 'palette-grid-item';
+      if (index === state.selectedCatalogIndex) el.classList.add('selected');
+      el.dataset.catIndex = index;
+
+      const bi = getBrandBadge(item);
+      let sizeLabel = '';
+      if (item.type === 'straight') sizeLabel = item.length + 'mm';
+      else if (item.type === 'curve') {
+        if (item.double) sizeLabel = 'R' + item.innerR + '/' + item.outerR + ' ' + item.angle + '°';
+        else sizeLabel = 'R' + item.radius + ' ' + item.angle + '°';
+      }
+      else if (item.type === 'turnout') sizeLabel = item.name || '';
+      else sizeLabel = item.name;
+
+      const badgeEl = document.createElement('div');
+      badgeEl.style.cssText = `background:${bi.color};color:#fff;font-size:8px;font-weight:700;padding:1px 3px;border-radius:2px;flex-shrink:0;white-space:nowrap`;
+      badgeEl.textContent = bi.text;
+      el.appendChild(badgeEl);
+
+      const info = document.createElement('div');
+      info.className = 'item-info';
+      const priceHtml = item.brand === 'ArcPath' ? `<br><span class="item-price">&yen;${item.price.toLocaleString()}</span>` : '';
+      info.innerHTML = `${sizeLabel}${priceHtml}`;
+      el.appendChild(info);
+
+      el.addEventListener('click', () => {
+        selectCatalogPiece(index);
+        document.getElementById('drawer-selected-label').textContent = bi.text + ' ' + sizeLabel;
+        mobileDrawer.classList.add('collapsed');
+        state.mobileDrawerExpanded = false;
+      });
+
+      grid.appendChild(el);
+    }
+    content.appendChild(grid);
+  }
+
+  document.getElementById('mobile-drawer-handle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    mobileDrawer.classList.toggle('collapsed');
+    state.mobileDrawerExpanded = !mobileDrawer.classList.contains('collapsed');
+  });
+}
+
+window.toggleDesktopPalette = function() {
+  paletteEl.classList.toggle('collapsed');
+  const btn = document.getElementById('palette-toggle');
+  btn.innerHTML = paletteEl.classList.contains('collapsed') ? '&#9654; パーツ' : '&#9664; パーツ';
+  setTimeout(resizeCanvas, 350);
+};
+
+// ===============================================
+// Event handlers — MODELESS
+// ===============================================
+
+function setupEvents() {
+
+  // ── Mouse events ──
+  canvasWrap.addEventListener('mousedown', (e) => {
+    if (e.target.closest('#mobile-drawer')) return;
+    hideContextMenu();
+    // Silently reset leaked state from previous interaction
+    if (state.extending || state.dragging) {
+      resetInteractionState();
+    }
+
+    // Middle-click or alt+click = pan
+    if (e.button === 1 || (e.button === 0 && e.altKey)) {
+      state.panning = true;
+      state.panStart = { x: e.clientX - state.panX, y: e.clientY - state.panY };
+      canvasWrap.style.cursor = 'grabbing';
+      e.preventDefault();
+      return;
+    }
+    if (e.button !== 0) return;
+
+    const world = screenToWorld(e.clientX, e.clientY);
+
+    // Priority 1: endpoint handle
+    const endpoint = hitTestEndpoint(world.x, world.y);
+    if (endpoint) {
+      state.extending = {
+        pieceId: endpoint.pieceId,
+        connIdx: endpoint.connIdx,
+        lastPlacedId: null,
+        lastPlacedConn: null,
+      };
+      state.extendChain = [];
+      e.preventDefault();
+      return;
+    }
+
+    // Priority 2: piece body → select + drag
+    const piece = hitTest(world.x, world.y);
+    if (piece) {
+      pushUndo();
+      selectPiece(piece.id);
+      disconnectPiece(piece);
+      state.dragging = {
+        id: piece.id,
+        offsetX: piece.x - world.x,
+        offsetY: piece.y - world.y,
+      };
+      e.preventDefault();
+      return;
+    }
+
+    // Priority 3: empty space → pan (click detection on mouseup for placement)
+    selectPiece(null);
+    state.panning = true;
+    state.panStart = { x: e.clientX - state.panX, y: e.clientY - state.panY };
+    state._clickStart = { x: e.clientX, y: e.clientY };
+    canvasWrap.style.cursor = 'grabbing';
+  });
+
+  canvasWrap.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const world = screenToWorld(e.clientX, e.clientY);
+    const piece = hitTest(world.x, world.y);
+    if (piece) {
+      selectPiece(piece.id);
+      showContextMenu(e.clientX, e.clientY);
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    try {
+      // Extending
+      if (state.extending) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        handleExtendMove(world.x, world.y);
+        return;
+      }
+
+      // Panning
+      if (state.panning) {
+        state.panX = e.clientX - state.panStart.x;
+        state.panY = e.clientY - state.panStart.y;
+        updateView();
+        return;
+      }
+
+      // Dragging piece
+      if (state.dragging) {
+        const piece = state.pieces.find(p => p.id === state.dragging.id);
+        if (!piece) { state.dragging = null; return; }
+        const world = screenToWorld(e.clientX, e.clientY);
+        piece.x = world.x + state.dragging.offsetX;
+        piece.y = world.y + state.dragging.offsetY;
+        const g = svgEl.querySelector(`[data-id="${piece.id}"]`);
+        if (g) updatePieceTransform(g, piece);
+        drawEndpointHandles();
+        showSnapIndicator(state.snapEnabled ? findSnapTarget(piece) : null);
+      }
+    } catch (err) {
+      showError('mousemove: ' + err.message);
+      showDebug('state: ext=' + !!state.extending + ' drag=' + !!state.dragging + ' pan=' + state.panning);
+      state.extending = null;
+      state.dragging = null;
+      state.panning = false;
+    }
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    try {
+    if (state.extending) {
+      // If user clicked endpoint without dragging, place one piece
+      if (state.extendChain.length === 0) {
+        const src = state.pieces.find(p => p.id === state.extending.pieceId);
+        if (src) {
+          const conns = getWorldConnectors(src);
+          const c = conns[state.extending.connIdx];
+          if (c) {
+            const fwdRad = c.angle * Math.PI / 180;
+            const newPiece = extendFromEndpoint(
+              state.extending.pieceId, state.extending.connIdx,
+              c.x + Math.cos(fwdRad) * 30, c.y + Math.sin(fwdRad) * 30
+            );
+            if (newPiece) selectPiece(newPiece.id);
+          }
+        }
+      }
+      state.extending = null;
+      state.extendChain = [];
+      drawEndpointHandles();
+      return;
+    }
+
+    if (state.panning) {
+      state.panning = false;
+      canvasWrap.style.cursor = '';
+      if (state._clickStart) {
+        const dx = e.clientX - state._clickStart.x;
+        const dy = e.clientY - state._clickStart.y;
+        if (Math.sqrt(dx * dx + dy * dy) < 5 && state.selectedCatalogIndex != null) {
+          pushUndo();
+          const world = screenToWorld(e.clientX, e.clientY);
+          const piece = addPiece(state.selectedCatalogIndex, world.x, world.y);
+          if (piece) {
+            if (state.snapEnabled) {
+              const snap = findSnapTarget(piece);
+              if (snap) { snapPiece(piece, snap); refreshPieceSVG(piece); }
+            }
+            selectPiece(piece.id);
+            drawEndpointHandles();
+          }
+        }
+        state._clickStart = null;
+      }
+      return;
+    }
+
+    if (state.dragging) {
+      const piece = state.pieces.find(p => p.id === state.dragging.id);
+      if (piece && state.snapEnabled) {
+        const snap = findSnapTarget(piece);
+        if (snap) { snapPiece(piece, snap); refreshPieceSVG(piece); }
+      }
+      hideSnapIndicator();
+      state.dragging = null;
+      drawEndpointHandles();
+    }
+    } catch (err) {
+      showError('mouseup: ' + err.message);
+      showDebug('state: ext=' + !!state.extending + ' drag=' + !!state.dragging + ' pan=' + state.panning);
+    } finally {
+      // ALWAYS reset interaction state to prevent permanent lockup
+      state.extending = null;
+      state.extendChain = [];
+      state.dragging = null;
+      state.panning = false;
+      state._clickStart = null;
+      canvasWrap.style.cursor = '';
+    }
+  });
+
+  canvasWrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvasWrap.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const oldZoom = state.zoom;
+    const delta = e.deltaY > 0 ? 0.92 : 1.08;
+    state.zoom = Math.min(3, Math.max(0.1, state.zoom * delta));
+    state.panX = mx - (mx - state.panX) * (state.zoom / oldZoom);
+    state.panY = my - (my - state.panY) * (state.zoom / oldZoom);
+    updateView();
+  }, { passive: false });
+
+  // ── Touch events ──
+  const DRAG_THRESHOLD = 10;
+  let touchStartPos = null;
+  let touchStartPiece = null;
+  let touchStartEndpoint = null;
+  let touchCommitted = false;
+  let activeTouches = {};
+
+  // Helper: reset ALL interaction state (emergency recovery)
+  function resetInteractionState() {
+    state.extending = null; state.extendChain = [];
+    state.dragging = null; state.panning = false;
+    state._clickStart = null; state.lastPinchDist = null;
+    state.pinchCenter = null;
+    canvasWrap.style.cursor = '';
+    clearLongPress();
+    touchStartPos = null; touchStartPiece = null;
+    touchStartEndpoint = null; touchCommitted = false;
+    activeTouches = {};
+    dragGhost.style.display = 'none';
+  }
+
+  canvasWrap.addEventListener('touchstart', (e) => {
+    if (e.target.closest('#mobile-drawer')) return;
+    if (e.target.closest('#fab-add')) return;
+    e.preventDefault();
+    try {
+      // Silently reset leaked state from previous interaction
+      if (state.extending || state.dragging) {
+        resetInteractionState();
+      }
+      // Reset activeTouches from reality, then add new touches
+      activeTouches = {};
+      for (const t of e.touches) {
+        activeTouches[t.identifier] = { x: t.clientX, y: t.clientY };
+      }
+      const touchCount = e.touches.length;
+
+      if (touchCount === 2) {
+        clearLongPress();
+        touchCommitted = true;
+        state.dragging = null;
+        state.extending = null;
+        const pts = Object.values(activeTouches);
+        state.lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        state.pinchCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+        state.panning = true;
+        state.panStart = { x: state.pinchCenter.x - state.panX, y: state.pinchCenter.y - state.panY };
+        return;
+      }
+
+      if (touchCount === 1) {
+        const t = e.touches[0];
+        touchStartPos = { x: t.clientX, y: t.clientY };
+        state.touchStartTime = Date.now();
+        state.touchMoved = false;
+        touchCommitted = false;
+
+        const world = screenToWorld(t.clientX, t.clientY);
+        touchStartEndpoint = hitTestEndpoint(world.x, world.y);
+        touchStartPiece = touchStartEndpoint ? null : hitTest(world.x, world.y);
+
+        state.longPressTimer = setTimeout(() => {
+          if (!state.touchMoved && touchStartPiece) {
+            touchCommitted = true;
+            selectPiece(touchStartPiece.id);
+            showContextMenu(t.clientX, t.clientY);
+          }
+        }, 500);
+      }
+    } catch (err) {
+      showError('touchstart: ' + err.message + ' | stack: ' + (err.stack||'').split('\n')[1]);
+      showDebug('state: ext=' + !!state.extending + ' drag=' + !!state.dragging + ' pan=' + state.panning + ' pieces=' + state.pieces.length);
+      resetInteractionState();
+    }
+  }, { passive: false });
+
+  window.addEventListener('touchmove', (e) => {
+    try {
+      // Update activeTouches from actual touches
+      activeTouches = {};
+      for (const t of e.touches) {
+        activeTouches[t.identifier] = { x: t.clientX, y: t.clientY };
+      }
+      const touchCount = e.touches.length;
+
+      if (touchCount === 2) {
+        e.preventDefault();
+        const pts = Object.values(activeTouches);
+        const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        const newCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+        if (state.lastPinchDist) {
+          const scale = newDist / state.lastPinchDist;
+          const oldZoom = state.zoom;
+          const rect = canvasWrap.getBoundingClientRect();
+          const mx = newCenter.x - rect.left;
+          const my = newCenter.y - rect.top;
+          state.zoom = Math.min(3, Math.max(0.1, state.zoom * scale));
+          state.panX = mx - (mx - state.panX) * (state.zoom / oldZoom);
+          state.panY = my - (my - state.panY) * (state.zoom / oldZoom);
+          if (state.pinchCenter) {
+            state.panX += newCenter.x - state.pinchCenter.x;
+            state.panY += newCenter.y - state.pinchCenter.y;
+          }
+          state.pinchCenter = newCenter;
+          updateView();
+        }
+        state.lastPinchDist = newDist;
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        if (!touchStartPos) return;
+        const dx = t.clientX - touchStartPos.x;
+        const dy = t.clientY - touchStartPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > DRAG_THRESHOLD && !touchCommitted) {
+          state.touchMoved = true;
+          touchCommitted = true;
+          clearLongPress();
+
+          if (touchStartEndpoint) {
+            state.extending = {
+              pieceId: touchStartEndpoint.pieceId,
+              connIdx: touchStartEndpoint.connIdx,
+              lastPlacedId: null,
+              lastPlacedConn: null,
+            };
+            state.extendChain = [];
+          } else if (touchStartPiece) {
+            pushUndo();
+            selectPiece(touchStartPiece.id);
+            disconnectPiece(touchStartPiece);
+            const world = screenToWorld(touchStartPos.x, touchStartPos.y);
+            state.dragging = {
+              id: touchStartPiece.id,
+              offsetX: touchStartPiece.x - world.x,
+              offsetY: touchStartPiece.y - world.y,
+            };
+          } else {
+            state.panning = true;
+            state.panStart = { x: touchStartPos.x - state.panX, y: touchStartPos.y - state.panY };
+          }
+        }
+
+        if (dist > DRAG_THRESHOLD) { state.touchMoved = true; clearLongPress(); }
+
+        if (touchCommitted) {
+          e.preventDefault();
+          if (state.extending) {
+            const world = screenToWorld(t.clientX, t.clientY);
+            handleExtendMove(world.x, world.y);
+          } else if (state.dragging) {
+            const piece = state.pieces.find(p => p.id === state.dragging.id);
+            if (piece) {
+              const world = screenToWorld(t.clientX, t.clientY);
+              piece.x = world.x + state.dragging.offsetX;
+              piece.y = world.y + state.dragging.offsetY;
+              const g = svgEl.querySelector(`[data-id="${piece.id}"]`);
+              if (g) updatePieceTransform(g, piece);
+              drawEndpointHandles();
+            }
+          } else if (state.panning) {
+            state.panX = t.clientX - state.panStart.x;
+            state.panY = t.clientY - state.panStart.y;
+            updateView();
+          }
+        }
+      }
+    } catch (err) {
+      showError('touchmove: ' + err.message + ' | stack: ' + (err.stack||'').split('\n')[1]);
+      showDebug('state: ext=' + !!state.extending + ' drag=' + !!state.dragging + ' pan=' + state.panning + ' pieces=' + state.pieces.length);
+      resetInteractionState();
+    }
+  }, { passive: false });
+
+  window.addEventListener('touchend', (e) => {
+    const touchCount = e.touches.length;
+    // Sync activeTouches with reality
+    activeTouches = {};
+    for (const t of e.touches) activeTouches[t.identifier] = { x: t.clientX, y: t.clientY };
+
+    try {
+      const endTouch = e.changedTouches[0];
+      if (touchCount < 2) { state.lastPinchDist = null; state.pinchCenter = null; }
+      clearLongPress();
+
+      if (state.extending && touchCount === 0) {
+        state.extending = null;
+        state.extendChain = [];
+        drawEndpointHandles();
+      }
+      if (state.dragging && touchCount === 0) {
+        const piece = state.pieces.find(p => p.id === state.dragging.id);
+        if (piece && state.snapEnabled) {
+          const snap = findSnapTarget(piece);
+          if (snap) { snapPiece(piece, snap); refreshPieceSVG(piece); }
+        }
+        state.dragging = null;
+        drawEndpointHandles();
+      }
+      if (state.panning && touchCount === 0) state.panning = false;
+
+      // Tap detection
+      if (!state.touchMoved && touchCount === 0 && !touchCommitted) {
+        const elapsed = Date.now() - state.touchStartTime;
+        if (elapsed < 400) {
+          if (touchStartEndpoint) {
+            const ep = touchStartEndpoint;
+            const sourcePiece = state.pieces.find(p => p.id === ep.pieceId);
+            if (sourcePiece) {
+              const conns = getWorldConnectors(sourcePiece);
+              const c = conns[ep.connIdx];
+              if (c) {
+                const fwdRad = c.angle * Math.PI / 180;
+                const newPiece = extendFromEndpoint(ep.pieceId, ep.connIdx,
+                  c.x + Math.cos(fwdRad) * 30, c.y + Math.sin(fwdRad) * 30);
+                if (newPiece) selectPiece(newPiece.id);
+              }
+            }
+          } else if (touchStartPiece) {
+            selectPiece(touchStartPiece.id);
+          } else {
+            if (state.selectedCatalogIndex != null) {
+              pushUndo();
+              const world = screenToWorld(endTouch.clientX, endTouch.clientY);
+              const piece = addPiece(state.selectedCatalogIndex, world.x, world.y);
+              if (piece) {
+                if (state.snapEnabled) {
+                  const snap = findSnapTarget(piece);
+                  if (snap) { snapPiece(piece, snap); refreshPieceSVG(piece); }
+                }
+                selectPiece(piece.id);
+                drawEndpointHandles();
+              }
+            } else {
+              selectPiece(null);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      showError('touchend: ' + err.message + ' | stack: ' + (err.stack||'').split('\n')[1]);
+      showDebug('state: ext=' + !!state.extending + ' drag=' + !!state.dragging + ' pan=' + state.panning + ' pieces=' + state.pieces.length);
+    } finally {
+      // ALWAYS reset on last finger up
+      if (touchCount === 0) {
+        state.extending = null;
+        state.extendChain = [];
+        state.dragging = null;
+        state.panning = false;
+      }
+      touchStartPos = null;
+      touchStartPiece = null;
+      touchStartEndpoint = null;
+      touchCommitted = false;
+    }
+  });
+
+  window.addEventListener('touchcancel', () => {
+    activeTouches = {};
+    state.lastPinchDist = null;
+    state.pinchCenter = null;
+    clearLongPress();
+    state.dragging = null;
+    state.panning = false;
+    state.extending = null;
+    state.extendChain = [];
+    touchStartPos = null;
+    touchStartPiece = null;
+    touchStartEndpoint = null;
+    touchCommitted = false;
+    dragGhost.style.display = 'none';
+  });
+
+  function clearLongPress() {
+    if (state.longPressTimer) { clearTimeout(state.longPressTimer); state.longPressTimer = null; }
+  }
+
+  // ── Keyboard ──
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'Escape') {
+      // Full state reset
+      state.extending = null; state.extendChain = [];
+      state.dragging = null; state.panning = false;
+      state._clickStart = null; canvasWrap.style.cursor = '';
+      selectPiece(null); hideContextMenu(); drawEndpointHandles();
+      return;
+    }
+    if (e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) { e.preventDefault(); undo(); return; }
+    if (e.ctrlKey && (e.key === 'z' || e.key === 'Z') && e.shiftKey) { e.preventDefault(); redo(); return; }
+    if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
+    if (e.key === 'r' || e.key === 'R') { rotatePiece(e.shiftKey ? 5.625 : 11.25); return; }
+    if (e.key === 'f' || e.key === 'F') { flipPiece(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selected) { removePiece(state.selected); return; }
+    if (e.ctrlKey && (e.key === 'd' || e.key === 'D')) { e.preventDefault(); duplicateSelected(); return; }
+  });
+
+  // ── Toolbar buttons ──
+  document.getElementById('btn-undo').addEventListener('click', undo);
+  document.getElementById('btn-redo').addEventListener('click', redo);
+  document.getElementById('btn-rotate').addEventListener('click', () => rotatePiece(11.25));
+  document.getElementById('btn-flip').addEventListener('click', flipPiece);
+  document.getElementById('btn-delete').addEventListener('click', () => { if (state.selected) removePiece(state.selected); });
+  document.getElementById('btn-snap').addEventListener('click', (e) => {
+    state.snapEnabled = !state.snapEnabled;
+    e.currentTarget.classList.toggle('active', state.snapEnabled);
+  });
+  document.getElementById('btn-grid').addEventListener('click', (e) => {
+    state.gridEnabled = !state.gridEnabled;
+    e.currentTarget.classList.toggle('active', state.gridEnabled);
+    drawGrid();
+  });
+  document.getElementById('btn-zoom-in').addEventListener('click', () => { state.zoom = Math.min(3, state.zoom * 1.2); updateView(); });
+  document.getElementById('btn-zoom-out').addEventListener('click', () => { state.zoom = Math.max(0.1, state.zoom / 1.2); updateView(); });
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    if (state.pieces.length === 0 || confirm('レイアウトをクリアしますか?')) {
+      state.pieces = [];
+      state.selected = null;
+      state.nextId = 1;
+      svgEl.querySelector('#pieces-layer').innerHTML = '';
+      drawEndpointHandles();
+    }
+  });
+  document.getElementById('btn-parts').addEventListener('click', showPartsList);
+  document.getElementById('btn-export').addEventListener('click', exportPNG);
+  document.getElementById('btn-save').addEventListener('click', saveLayout);
+  document.getElementById('btn-load').addEventListener('click', loadLayout);
+
+  // FAB button
+  document.getElementById('fab-add').addEventListener('click', () => {
+    mobileDrawer.classList.toggle('collapsed');
+    state.mobileDrawerExpanded = !mobileDrawer.classList.contains('collapsed');
+  });
+
+  // Context menu
+  document.getElementById('ctx-menu').addEventListener('click', (e) => {
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (!action) return;
+    hideContextMenu();
+    if (!state.selected) return;
+    switch (action) {
+      case 'rotate': rotatePiece(11.25); break;
+      case 'rotate-fine': rotatePiece(5.625); break;
+      case 'rotate-90': rotatePiece(90); break;
+      case 'flip': flipPiece(); break;
+      case 'duplicate': duplicateSelected(); break;
+      case 'delete': removePiece(state.selected); break;
+    }
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#ctx-menu')) hideContextMenu(); });
+
+  window.addEventListener('resize', resizeCanvas);
+}
+
+// ── Extend move handler (continuous placement) ──
+function handleExtendMove(worldX, worldY) {
+  if (!state.extending) return;
+
+  // Determine current source
+  let sourceId, sourceConn;
+  if (state.extending.lastPlacedId) {
+    sourceId = state.extending.lastPlacedId;
+    sourceConn = state.extending.lastPlacedConn;
+  } else {
+    sourceId = state.extending.pieceId;
+    sourceConn = state.extending.connIdx;
+  }
+
+  const sourcePiece = state.pieces.find(p => p.id === sourceId);
+  if (!sourcePiece) { console.warn('extend: source piece not found', sourceId); return; }
+  if (sourcePiece.connections.some(c => c.connIdx === sourceConn)) {
+    console.warn('extend: source conn already connected', sourceId, sourceConn, sourcePiece.connections);
+    return;
+  }
+
+  const conns = getWorldConnectors(sourcePiece);
+  const outConn = conns[sourceConn];
+  if (!outConn) { console.warn('extend: no outConn at index', sourceConn); return; }
+
+  // Distance from current output to finger
+  const dx = worldX - outConn.x;
+  const dy = worldY - outConn.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  // Threshold: visual piece length * 0.7, min 25px screen-space
+  const def = CATALOG[state.selectedCatalogIndex];
+  if (!def || def.type === 'accessory') return;
+  let threshold;
+  if (def.type === 'straight') {
+    threshold = getVisualStraightLength(def.length) * 0.7;
+  } else {
+    const R = getVisualCurveRadius(def.radius || 730);
+    const theta = def.angle * Math.PI / 180;
+    threshold = 2 * R * Math.sin(theta / 2) * 0.7;
+  }
+  // Minimum threshold in screen-space: 25px on screen
+  const minWorldThreshold = 25 / state.zoom;
+  threshold = Math.max(minWorldThreshold, threshold);
+
+  if (dist >= threshold) {
+    const newPiece = extendFromEndpoint(sourceId, sourceConn, worldX, worldY);
+    if (newPiece) {
+      state.extendChain.push(newPiece.id);
+      state.extending.lastPlacedId = newPiece.id;
+      state.extending.lastPlacedConn = 1; // Continue from exit
+      console.log('extend: placed piece', newPiece.id, 'chain length:', state.extendChain.length);
+    } else {
+      console.warn('extend: extendFromEndpoint returned null');
+    }
+  }
+}
+
+// ── Snap indicator ──
+function showSnapIndicator(snap) {
+  let indicator = svgEl.querySelector('#snap-indicator');
+  if (!indicator) {
+    indicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    indicator.id = 'snap-indicator';
+    indicator.setAttribute('r', '8');
+    indicator.setAttribute('fill', 'none');
+    indicator.setAttribute('stroke', '#ed8f57');
+    indicator.setAttribute('stroke-width', '2');
+    indicator.setAttribute('stroke-dasharray', '4,2');
+    svgEl.querySelector('#overlay-layer').appendChild(indicator);
+  }
+  if (snap) {
+    const otherConns = getWorldConnectors(snap.otherPiece);
+    const target = otherConns[snap.otherConn];
+    indicator.setAttribute('cx', target.x);
+    indicator.setAttribute('cy', target.y);
+    indicator.setAttribute('display', '');
+  } else {
+    indicator.setAttribute('display', 'none');
+  }
+}
+
+function hideSnapIndicator() {
+  const indicator = svgEl.querySelector('#snap-indicator');
+  if (indicator) indicator.setAttribute('display', 'none');
+}
+
+// ── Piece operations ──
+function rotatePiece(deg) {
+  const piece = state.pieces.find(p => p.id === state.selected);
+  if (!piece) return;
+  pushUndo();
+  disconnectPiece(piece);
+  piece.rotation = ((piece.rotation + deg) % 360 + 360) % 360;
+  refreshPieceSVG(piece);
+  drawEndpointHandles();
+  if (state.snapEnabled) {
+    const snap = findSnapTarget(piece);
+    if (snap) { snapPiece(piece, snap); refreshPieceSVG(piece); drawEndpointHandles(); }
+  }
+}
+
+function flipPiece() {
+  const piece = state.pieces.find(p => p.id === state.selected);
+  if (!piece) return;
+  pushUndo();
+  disconnectPiece(piece);
+  piece.flip = !piece.flip;
+  refreshPieceSVG(piece);
+  drawEndpointHandles();
+}
+
+function duplicateSelected() {
+  const piece = state.pieces.find(p => p.id === state.selected);
+  if (!piece) return;
+  pushUndo();
+  const newP = addPiece(piece.catIndex, piece.x + 30, piece.y + 30);
+  if (newP) {
+    newP.rotation = piece.rotation;
+    newP.flip = piece.flip;
+    refreshPieceSVG(newP);
+    selectPiece(newP.id);
+  }
+}
+
+function showContextMenu(x, y) {
+  const menu = document.getElementById('ctx-menu');
+  menu.style.display = 'block';
+  menu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - 260) + 'px';
+}
+
+function hideContextMenu() {
+  document.getElementById('ctx-menu').style.display = 'none';
+}
+
+// ===============================================
+// Parts list
+// ===============================================
+
+function showPartsList() {
+  const counts = {};
+  for (const piece of state.pieces) {
+    const sku = piece.def.sku;
+    counts[sku] = (counts[sku] || 0) + 1;
+  }
+  if (Object.keys(counts).length === 0) { alert('レイアウトにパーツがありません'); return; }
+
+  let html = '<table><thead><tr><th>メーカー</th><th>品名</th><th>種別</th><th>数量</th><th>単価</th><th>小計</th></tr></thead><tbody>';
+  let total = 0;
+  for (const [sku, qty] of Object.entries(counts)) {
+    const def = CATALOG.find(c => c.sku === sku);
+    if (!def) continue;
+    const subtotal = def.price * qty;
+    if (def.brand === 'ArcPath') total += subtotal;
+    // Track variant label
+    let variant = '';
+    if (def.variant === 'slab') variant = 'スラブ';
+    else if (def.variant === 'ladder') variant = 'FL';
+    else if (def.brand === 'KATO' && def.name && def.name.includes('PC')) variant = 'PC';
+    else if (def.brand === 'KATO') variant = 'バラスト';
+    if (def.level === 'elevated') variant += variant ? '/高架' : '高架';
+    if (def.double) variant += variant ? '/複線' : '複線';
+    const priceCell = def.brand === 'ArcPath' ? `&yen;${def.price.toLocaleString()}` : '-';
+    const subtotalCell = def.brand === 'ArcPath' ? `&yen;${subtotal.toLocaleString()}` : '-';
+    html += `<tr><td style="font-size:11px;font-weight:700">${def.brand || ''}</td><td>${def.name}</td><td style="font-size:11px;color:#666">${variant}</td><td>${qty}</td><td>${priceCell}</td><td>${subtotalCell}</td></tr>`;
+  }
+  html += `<tr class="total-row"><td colspan="5">合計（ArcPath）</td><td>&yen;${total.toLocaleString()}</td></tr>`;
+  html += '</tbody></table>';
+  html += `<p style="margin-top:12px;font-size:12px;color:#888">※ 橋脚は別途必要です（高架パーツ使用時）</p>`;
+  document.getElementById('parts-content').innerHTML = html;
+  document.getElementById('parts-modal').classList.add('show');
+}
+
+// ===============================================
+// Export PNG
+// ===============================================
+
+function exportPNG() {
+  if (state.pieces.length === 0) { alert('レイアウトにパーツがありません'); return; }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const piece of state.pieces) {
+    const conns = getWorldConnectors(piece);
+    for (const c of conns) {
+      minX = Math.min(minX, c.x); minY = Math.min(minY, c.y);
+      maxX = Math.max(maxX, c.x); maxY = Math.max(maxY, c.y);
+    }
+    const bbox = getBBox(piece);
+    const rad = piece.rotation * Math.PI / 180;
+    const corners = [
+      [bbox.x, bbox.y], [bbox.x + bbox.w, bbox.y],
+      [bbox.x, bbox.y + bbox.h], [bbox.x + bbox.w, bbox.y + bbox.h]
+    ];
+    for (const [lx, ly] of corners) {
+      const flipLy = piece.flip ? -ly : ly;
+      const wx = piece.x + lx * Math.cos(rad) - flipLy * Math.sin(rad);
+      const wy = piece.y + lx * Math.sin(rad) + flipLy * Math.cos(rad);
+      minX = Math.min(minX, wx); minY = Math.min(minY, wy);
+      maxX = Math.max(maxX, wx); maxY = Math.max(maxY, wy);
+    }
+  }
+
+  const pad = 60;
+  const partsHeight = 200;
+  minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+  const w = maxX - minX;
+  const h = maxY - minY + partsHeight;
+
+  const deselected = state.selected;
+  selectPiece(null);
+
+  const exportSvg = svgEl.cloneNode(false);
+  exportSvg.setAttribute('width', w);
+  exportSvg.setAttribute('height', h);
+  exportSvg.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`);
+  exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', minX); bg.setAttribute('y', minY);
+  bg.setAttribute('width', w); bg.setAttribute('height', h);
+  bg.setAttribute('fill', '#fff');
+  exportSvg.appendChild(bg);
+
+  const piecesLayer = svgEl.querySelector('#pieces-layer');
+  if (piecesLayer) exportSvg.appendChild(piecesLayer.cloneNode(true));
+
+  // Parts list in export
+  const partsY = maxY + 10;
+  const counts = {};
+  for (const piece of state.pieces) counts[piece.def.sku] = (counts[piece.def.sku] || 0) + 1;
+  let ty = partsY + 20;
+
+  const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  titleText.setAttribute('x', minX + 20); titleText.setAttribute('y', ty);
+  titleText.setAttribute('font-family', 'Lato, Noto Sans JP, sans-serif');
+  titleText.setAttribute('font-size', '16'); titleText.setAttribute('font-weight', '700');
+  titleText.setAttribute('fill', '#4a545f');
+  titleText.textContent = 'ArcPath パーツリスト';
+  exportSvg.appendChild(titleText);
+  ty += 24;
+
+  let total = 0;
+  for (const [sku, qty] of Object.entries(counts)) {
+    const def = CATALOG.find(c => c.sku === sku);
+    if (!def) continue;
+    const subtotal = def.price * qty;
+    total += subtotal;
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', minX + 20); t.setAttribute('y', ty);
+    t.setAttribute('font-family', 'Lato, Noto Sans JP, sans-serif');
+    t.setAttribute('font-size', '12'); t.setAttribute('fill', '#4a545f');
+    t.textContent = `${def.name}  x${qty}  \u00A5${subtotal.toLocaleString()}`;
+    exportSvg.appendChild(t);
+    ty += 18;
+  }
+
+  const totalText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  totalText.setAttribute('x', minX + 20); totalText.setAttribute('y', ty + 8);
+  totalText.setAttribute('font-family', 'Lato, Noto Sans JP, sans-serif');
+  totalText.setAttribute('font-size', '14'); totalText.setAttribute('font-weight', '700');
+  totalText.setAttribute('fill', '#4a545f');
+  totalText.textContent = `合計: \u00A5${total.toLocaleString()}`;
+  exportSvg.appendChild(totalText);
+
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(exportSvg);
+  const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2; canvas.height = h * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    canvas.toBlob((b) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'arcpath_layout.png';
+      a.click();
+    });
+  };
+  img.src = url;
+  if (deselected) selectPiece(deselected);
+}
+
+// ===============================================
+// Save / Load
+// ===============================================
+
+function saveLayout() {
+  const data = {
+    version: 2,
+    pieces: state.pieces.map(p => ({
+      catIndex: p.catIndex, x: p.x, y: p.y,
+      rotation: p.rotation, flip: p.flip,
+    })),
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'arcpath_layout.json';
+  a.click();
+}
+
+function loadLayout() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.version !== 1 && data.version !== 2) throw new Error('Unknown version');
+        state.pieces = [];
+        state.selected = null;
+        state.nextId = 1;
+        svgEl.querySelector('#pieces-layer').innerHTML = '';
+        for (const pd of data.pieces) {
+          const piece = addPiece(pd.catIndex, pd.x, pd.y);
+          if (piece) {
+            piece.rotation = pd.rotation || 0;
+            piece.flip = pd.flip || false;
+            refreshPieceSVG(piece);
+          }
+        }
+        reconnectAll();
+        drawEndpointHandles();
+      } catch (err) {
+        alert('読み込みエラー: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
+// ===============================================
+// Init
+// ===============================================
+
+function init() {
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  svgEl.appendChild(defs);
+
+  const piecesLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  piecesLayer.id = 'pieces-layer';
+  svgEl.appendChild(piecesLayer);
+
+  const endpointOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  endpointOverlay.id = 'endpoint-overlay';
+  svgEl.appendChild(endpointOverlay);
+
+  const overlayLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  overlayLayer.id = 'overlay-layer';
+  svgEl.appendChild(overlayLayer);
+
+  state.zoom = isMobile() ? 0.8 : 1.2;
+  const rect = canvasWrap.getBoundingClientRect();
+  state.panX = rect.width / 2;
+  state.panY = rect.height / 2;
+
+  buildPalette();
+  buildMobileDrawer();
+  setupEvents();
+  resizeCanvas();
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>
