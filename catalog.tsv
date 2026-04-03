@@ -1,0 +1,84 @@
+brand	sku	category	name	price	type	length	radius	angle	radius2	angle2	tracks	amazon	note
+ArcPath	RM-HOSL001NL-SET-LGY	橋脚	標準橋脚 4つセット(ライトグレー)	1500	accessory	0	0	0	0	0	0	OK
+ArcPath	RM-HOSL001NL-SET-6-LGY	橋脚	6番橋脚 4つセット(ライトグレー)	1500	accessory	0	0	0	0	0	0
+ArcPath	RM-HOSL001SET-LGY	橋脚	勾配橋脚セット(ライトグレー)	5000	accessory	0	0	0	0	0	0	OK	0〜12までのセット品
+ArcPath	RM-HOSSS246-LGY	単線高架直線	単線高架 246mm(ライトグレー)	2000	straight	246	0	0	0	0	1	OK
+ArcPath	RM-HOSSA246-LGY	単線高架直線	単線アドオン高架 246mm(ライトグレー)	1500	straight	246	0	0	0	0	1	OK
+ArcPath	RM-HOSSA369-LGY	単線高架直線	単線アドオン高架 369mm(ライトグレー)	2000	straight	369	0	0	0	0	1	OK	2本で1セット
+ArcPath	RM-HOSSS246VS-LGY	単線高架直線	単線高架 縦凸曲線 246mm(ライトグレー)	2000	straight	246	0	0	0	0	1	OK
+ArcPath	RM-HOSSS246VB-LGY	単線高架直線	単線高架 縦凹曲線 246mm(ライトグレー)	2000	straight	246	0	0	0	0	1	OK
+ArcPath	RM-HOSRS1606-LGY	単線高架曲線	単線高架 R1606 5.625°(ライトグレー)	1500	curve	0	1606	5.625	0	0	1	OK
+ArcPath	RM-HOSRS1546-LGY	単線高架曲線	単線高架 R1546 5.625°(ライトグレー)	1500	curve	0	1546	5.625	0	0	1	OK
+ArcPath	RM-HOSRS730-LGY	単線高架曲線	単線高架 R730 11.25°	1500	curve	0	730	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOSRS790-LGY	単線高架曲線	単線高架 R790 11.25°	1500	curve	0	790	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOSRS850-LGY	単線高架曲線	単線高架 R850 11.25°	1500	curve	0	850	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOSRS910-LGY	単線高架曲線	単線高架 R910 11.25°	1500	curve	0	910	11.25	0	0	1		2026春新製品
+ArcPath	RM-HODSS246-LGY	複線高架直線	複線高架 246mm(ライトグレー)	4000	straight	246	0	0	0	0	2	OK
+ArcPath	RM-HODSA246-LGY	複線高架直線	複線アドオン高架 246mm(ライトグレー)	3000	straight	246	0	0	0	0	2	OK
+ArcPath	RM-HODSA369-LGY	複線高架直線	複線アドオン高架 369mm(ライトグレー)	4000	straight	369	0	0	0	0	2	OK
+ArcPath	RM-HODSS246VS-LGY	複線高架直線	複線高架 縦凸曲線 246mm(ライトグレー)	4000	straight	246	0	0	0	0	2	OK
+ArcPath	RM-HODSS246VB-LGY	複線高架直線	複線高架 縦凹曲線 246mm(ライトグレー)	4000	straight	246	0	0	0	0	2	OK
+ArcPath	RM-HODRS1546-1606-LGY	複線高架曲線	複線高架 R1546/1606 5.625°(ライトグレー)	3000	curve	0	1546	5.625	1606	0	2	OK
+ArcPath	RM-HODRS730-790-LGY	複線高架曲線	複線高架 R730/790 11.25°	3000	curve	0	730	11.25	790	0	2		2026春新製品
+ArcPath	RM-HODRS790-850-LGY	複線高架曲線	複線高架 R790/850 11.25°	3000	curve	0	790	11.25	850	0	2		2026春新製品
+ArcPath	RM-HODRS850-910-LGY	複線高架曲線	複線高架 R850/910 11.25°	3000	curve	0	850	11.25	910	0	2		2026春新製品
+ArcPath	RM-HOFLSS246-GY	地上スラブ直線	平面スラブ 246mm	1500	straight	246	0	0	0	0	1	OK
+ArcPath	RM-HOFLFL246-GY	地上FL直線	平面フローティングラダー 246mm	2000	straight	246	0	0	0	0	1	OK
+ArcPath	RM-HOFLSS114-LGY	地上スラブ直線	地上スラブ 114mm	800	straight	114	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLSS123-LGY	地上スラブ直線	地上スラブ 123mm	900	straight	123	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLSS149-LGY	地上スラブ直線	地上スラブ 149mm	1100	straight	149	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLSS174-LGY	地上スラブ直線	地上スラブ 174mm	1300	straight	174	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLFL114-LGY	地上FL直線	地上フローティングラダー 114mm	900	straight	114	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLFL123-LGY	地上FL直線	地上フローティングラダー 123mm	1100	straight	123	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLFL149-LGY	地上FL直線	地上フローティングラダー 149mm	1300	straight	149	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLFL174-LGY	地上FL直線	地上フローティングラダー 174mm	1500	straight	174	0	0	0	0	1		2026春新製品
+ArcPath	RM-HOFLRS730-LGY	地上スラブ曲線	地上スラブ R730 11.25°	1300	curve	0	730	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOFLRS790-LGY	地上スラブ曲線	地上スラブ R790 11.25°	1300	curve	0	790	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOFLRS850-LGY	地上スラブ曲線	地上スラブ R850 11.25°	1300	curve	0	850	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOFLRS910-LGY	地上スラブ曲線	地上スラブ R910 11.25°	1300	curve	0	910	11.25	0	0	1		2026春新製品
+ArcPath	RM-HOFLRS1546-LGY	地上スラブ曲線	地上スラブ R1546 5.625°	1300	curve	0	1546	5.625	0	0	1		2026春新製品
+ArcPath	RM-HOFLRS1606-LGY	地上スラブ曲線	地上スラブ R1606 5.625°	1300	curve	0	1606	5.625	0	0	1		2026春新製品
+ArcPath	RM-HOTPLT246-GY	アクセサリ	3線プレート 246mm	500	accessory	0	0	0	0	0	0	OK
+ArcPath	RM-HOACC001TP-LGY	アクセサリ	アクセサリホルダ(10個入り)(ライトグレー)	500	accessory	0	0	0	0	0	0	OK	架線柱ホルダ
+KATO	2-105	HO直線	直線線路 60mm (4本入)	275	straight	60	0	0	0	0	1		単価=1100/4
+KATO	2-111	HO直線	直線線路 94mm (2本入)	413	straight	94	0	0	0	0	1		単価=825/2
+KATO	2-120	HO直線	直線線路 114mm (4本入)	303	straight	114	0	0	0	0	1		単価=1210/4
+KATO	2-130	HO直線	直線線路 174mm (4本入)	330	straight	174	0	0	0	0	1		単価=1320/4
+KATO	2-140	HO直線	直線線路 123mm (4本入)	316	straight	123	0	0	0	0	1		単価=1265/4
+KATO	2-150	HO直線	直線線路 246mm (4本入)	358	straight	246	0	0	0	0	1		単価=1430/4
+KATO	2-160	HO直線	直線線路 227mm (2本入)	550	straight	227	0	0	0	0	1		単価=1100/2
+KATO	2-180	HO直線	直線線路 369mm (4本入)	468	straight	369	0	0	0	0	1		単価=1870/4
+KATO	2-192	HO直線	6番ポイント補助直線 97mm (4本入)	385	straight	97	0	0	0	0	1		単価=1540/4
+KATO	2-193	HO直線	直線線路 149mm (2本入)	550	straight	149	0	0	0	0	1		単価=1100/2
+KATO	2-141	HO直線(PC)	PC直線線路 123mm (4本入)	358	straight	123	0	0	0	0	1		PC枕木
+KATO	2-152	HO直線(PC)	PC直線線路 246mm (4本入)	358	straight	246	0	0	0	0	1		PC枕木
+KATO	2-181	HO直線(PC)	PC直線線路 369mm (4本入)	495	straight	369	0	0	0	0	1		PC枕木
+KATO	2-280	HO曲線	曲線線路 R370 22.5° (4本入)	358	curve	0	370	22.5	0	0	1		単価=1430/4
+KATO	2-260	HO曲線	曲線線路 R430 22.5° (4本入)	358	curve	0	430	22.5	0	0	1		単価=1430/4
+KATO	2-270	HO曲線	曲線線路 R490 22.5° (4本入)	413	curve	0	490	22.5	0	0	1		単価=1650/4
+KATO	2-210	HO曲線	曲線線路 R550 22.5° (4本入)	426	curve	0	550	22.5	0	0	1		単価=1705/4
+KATO	2-220	HO曲線	曲線線路 R610 22.5° (4本入)	440	curve	0	610	22.5	0	0	1		単価=1760/4
+KATO	2-230	HO曲線	曲線線路 R670 22.5° (4本入)	454	curve	0	670	22.5	0	0	1		単価=1815/4
+KATO	2-240	HO曲線	曲線線路 R730 22.5° (4本入)	468	curve	0	730	22.5	0	0	1		単価=1870/4
+KATO	2-250	HO曲線	曲線線路 R790 22.5° (4本入)	440	curve	0	790	22.5	0	0	1		単価=1760/4
+KATO	2-290	HO曲線	曲線線路 R867 10° (2本入)	550	curve	0	867	10	0	0	1		#6ポイント用
+KATO	2-241	HO曲線(PC)	PC曲線線路 R730 22.5° (4本入)	468	curve	0	730	22.5	0	0	1		PC枕木
+KATO	2-251	HO曲線(PC)	PC曲線線路 R790 22.5° (4本入)	481	curve	0	790	22.5	0	0	1		PC枕木
+KATO	2-321	HO曲線(PC)	PC大径曲線 R1546 11.25° (4本入)	495	curve	0	1546	11.25	0	0	1		PC枕木
+KATO	2-331	HO曲線(PC)	PC大径曲線 R1606 11.25° (4本入)	495	curve	0	1606	11.25	0	0	1		PC枕木
+KATO	2-840	HO分岐	手動ポイント4番 左 R490	3520	turnout	246	490	22.5	0	0	1
+KATO	2-841	HO分岐	手動ポイント4番 右 R490	3520	turnout	246	490	22.5	0	0	1
+KATO	2-852	HO分岐	手動ポイント 左 R550	5500	turnout	246	550	22.5	0	0	1
+KATO	2-853	HO分岐	手動ポイント 右 R550	5500	turnout	246	550	22.5	0	0	1
+KATO	2-860	HO分岐	電動ポイント6番 左 R867	6820	turnout	492	867	10	0	0	1
+KATO	2-861	HO分岐	電動ポイント6番 右 R867	6820	turnout	492	867	10	0	0	1
+KATO	2-862	HO分岐	手動ポイント6番 左 R867	4400	turnout	492	867	10	0	0	1
+KATO	2-863	HO分岐	手動ポイント6番 右 R867	4400	turnout	492	867	10	0	0	1
+KATO	2-401	HO特殊	交差線路 90°	1650	crossing	60	0	90	0	0	1
+KATO	2-170	HO特殊	車止め線路 109mm (2本入)	660	bumper	109	0	0	0	0	1		単価=1320/2
+KATO	2-142	HO特殊	リレーラー線路 123mm	990	straight	123	0	0	0	0	1
+KATO	2-143	HO特殊	アンカプラー線路 123mm	1650	straight	123	0	0	0	0	1
+KATO	2-194	HO特殊	スライド線路 212-252mm	3300	straight	232	0	0	0	0	1		伸縮式
+KATO	2-001	HO特殊	フレキシブル線路 900mm	1100	straight	900	0	0	0	0	1
+KATO	2-151	HO特殊	フィーダー線路 246mm	880	straight	246	0	0	0	0	1
+KATO	2-153	HO特殊	PCフィーダー線路 246mm	1540	straight	246	0	0	0	0	1		PC枕木

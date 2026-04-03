@@ -554,108 +554,102 @@ function getVisualCurveAngle(realAngle) {
 const TRACK_W = 12;
 const DOUBLE_SPACING = 60 / VISUAL_SCALE; // 60mm real center-to-center = 15px
 
-// ── Catalog (full lineup from arcpath_full_lineup.tsv) ──
-const CATALOG = [
-  // ═══ 地上スラブ 直線 ═══
-  { brand:'ArcPath', sku:'RM-HOFLSS114-LGY', cat:'直線', name:'地上スラブ 114mm', price:800, type:'straight', length:114, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLSS123-LGY', cat:'直線', name:'地上スラブ 123mm', price:900, type:'straight', length:123, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLSS149-LGY', cat:'直線', name:'地上スラブ 149mm', price:1100, type:'straight', length:149, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLSS174-LGY', cat:'直線', name:'地上スラブ 174mm', price:1300, type:'straight', length:174, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLSS246-GY',  cat:'直線', name:'平面スラブ 246mm', price:1500, type:'straight', length:246, variant:'slab', level:'ground' },
-  // ═══ 地上FL 直線 ═══
-  { brand:'ArcPath', sku:'RM-HOFLFL114-LGY', cat:'直線', name:'地上FL 114mm', price:900, type:'straight', length:114, variant:'ladder', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLFL123-LGY', cat:'直線', name:'地上FL 123mm', price:1100, type:'straight', length:123, variant:'ladder', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLFL149-LGY', cat:'直線', name:'地上FL 149mm', price:1300, type:'straight', length:149, variant:'ladder', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLFL174-LGY', cat:'直線', name:'地上FL 174mm', price:1500, type:'straight', length:174, variant:'ladder', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLFL246-GY',  cat:'直線', name:'平面FL 246mm', price:2000, type:'straight', length:246, variant:'ladder', level:'ground' },
-  // ═══ 地上スラブ 曲線 ═══
-  { brand:'ArcPath', sku:'RM-HOFLRS730-LGY',  cat:'曲線', name:'地上スラブ R730 11.25°', price:1300, type:'curve', radius:730, angle:11.25, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLRS790-LGY',  cat:'曲線', name:'地上スラブ R790 11.25°', price:1300, type:'curve', radius:790, angle:11.25, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLRS850-LGY',  cat:'曲線', name:'地上スラブ R850 11.25°', price:1300, type:'curve', radius:850, angle:11.25, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLRS910-LGY',  cat:'曲線', name:'地上スラブ R910 11.25°', price:1300, type:'curve', radius:910, angle:11.25, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLRS1546-LGY', cat:'曲線', name:'地上スラブ R1546 5.625°', price:1300, type:'curve', radius:1546, angle:5.625, variant:'slab', level:'ground' },
-  { brand:'ArcPath', sku:'RM-HOFLRS1606-LGY', cat:'曲線', name:'地上スラブ R1606 5.625°', price:1300, type:'curve', radius:1606, angle:5.625, variant:'slab', level:'ground' },
-  // ═══ 単線高架 直線 ═══
-  { brand:'ArcPath', sku:'RM-HOSSS246-LGY',    cat:'直線', name:'単線高架 246mm', price:2000, type:'straight', length:246, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSSA246-LGY',    cat:'直線', name:'単線アドオン 246mm', price:1500, type:'straight', length:246, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSSA369-LGY',    cat:'直線', name:'単線アドオン 369mm', price:2000, type:'straight', length:369, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSSS246VS-LGY',  cat:'直線', name:'単線 縦凸 246mm', price:2000, type:'straight', length:246, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSSS246VB-LGY',  cat:'直線', name:'単線 縦凹 246mm', price:2000, type:'straight', length:246, variant:'slab', level:'elevated' },
-  // ═══ 単線高架 曲線 ═══
-  { brand:'ArcPath', sku:'RM-HOSRS730-LGY',  cat:'曲線', name:'単線高架 R730 11.25°', price:1500, type:'curve', radius:730, angle:11.25, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSRS790-LGY',  cat:'曲線', name:'単線高架 R790 11.25°', price:1500, type:'curve', radius:790, angle:11.25, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSRS850-LGY',  cat:'曲線', name:'単線高架 R850 11.25°', price:1500, type:'curve', radius:850, angle:11.25, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSRS910-LGY',  cat:'曲線', name:'単線高架 R910 11.25°', price:1500, type:'curve', radius:910, angle:11.25, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSRS1546-LGY', cat:'曲線', name:'単線高架 R1546 5.625°', price:1500, type:'curve', radius:1546, angle:5.625, variant:'slab', level:'elevated' },
-  { brand:'ArcPath', sku:'RM-HOSRS1606-LGY', cat:'曲線', name:'単線高架 R1606 5.625°', price:1500, type:'curve', radius:1606, angle:5.625, variant:'slab', level:'elevated' },
-  // ═══ 複線高架 直線 ═══
-  { brand:'ArcPath', sku:'RM-HODSS246-LGY',    cat:'複線直線', name:'複線高架 246mm', price:4000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODSA246-LGY',    cat:'複線直線', name:'複線アドオン 246mm', price:3000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODSA369-LGY',    cat:'複線直線', name:'複線アドオン 369mm', price:4000, type:'straight', length:369, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODSS246VS-LGY',  cat:'複線直線', name:'複線 縦凸 246mm', price:4000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODSS246VB-LGY',  cat:'複線直線', name:'複線 縦凹 246mm', price:4000, type:'straight', length:246, variant:'slab', level:'elevated', double:true },
-  // ═══ 複線高架 曲線 ═══
-  { brand:'ArcPath', sku:'RM-HODRS730-790-LGY',   cat:'複線曲線', name:'複線高架 R730/790 11.25°', price:3000, type:'curve', radius:760, innerR:730, outerR:790, angle:11.25, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODRS790-850-LGY',   cat:'複線曲線', name:'複線高架 R790/850 11.25°', price:3000, type:'curve', radius:820, innerR:790, outerR:850, angle:11.25, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODRS850-910-LGY',   cat:'複線曲線', name:'複線高架 R850/910 11.25°', price:3000, type:'curve', radius:880, innerR:850, outerR:910, angle:11.25, variant:'slab', level:'elevated', double:true },
-  { brand:'ArcPath', sku:'RM-HODRS1546-1606-LGY', cat:'複線曲線', name:'複線高架 R1546/1606 5.625°', price:3000, type:'curve', radius:1576, innerR:1546, outerR:1606, angle:5.625, variant:'slab', level:'elevated', double:true },
-  // ═══ 橋脚 ═══
-  { brand:'ArcPath', sku:'RM-HOSL001NL-SET-LGY',   cat:'橋脚', name:'標準橋脚 4つセット', price:1500, type:'accessory' },
-  { brand:'ArcPath', sku:'RM-HOSL001NL-SET-6-LGY', cat:'橋脚', name:'6番橋脚 4つセット', price:1500, type:'accessory' },
-  { brand:'ArcPath', sku:'RM-HOSL001SET-LGY',      cat:'橋脚', name:'勾配橋脚セット', price:5000, type:'accessory' },
-  // ═══ アクセサリ ═══
-  { brand:'ArcPath', sku:'RM-HOTPLT246-GY',    cat:'アクセサリ', name:'3線プレート 246mm', price:500, type:'accessory' },
-  { brand:'ArcPath', sku:'RM-HOACC001TP-LGY', cat:'アクセサリ', name:'アクセサリホルダ 10個入り', price:500, type:'accessory' },
-  // ═══════════════════════════════════════════
-  // KATO HOユニトラック
-  // ═══════════════════════════════════════════
-  // ═══ HO直線 ═══
-  { brand:'KATO', sku:'2-105', cat:'直線', name:'60mm', price:275, type:'straight', length:60 },
-  { brand:'KATO', sku:'2-111', cat:'直線', name:'94mm', price:413, type:'straight', length:94 },
-  { brand:'KATO', sku:'2-192', cat:'直線', name:'補助 97mm', price:385, type:'straight', length:97 },
-  { brand:'KATO', sku:'2-120', cat:'直線', name:'114mm', price:303, type:'straight', length:114 },
-  { brand:'KATO', sku:'2-140', cat:'直線', name:'123mm', price:316, type:'straight', length:123 },
-  { brand:'KATO', sku:'2-193', cat:'直線', name:'149mm', price:550, type:'straight', length:149 },
-  { brand:'KATO', sku:'2-130', cat:'直線', name:'174mm', price:330, type:'straight', length:174 },
-  { brand:'KATO', sku:'2-160', cat:'直線', name:'227mm', price:550, type:'straight', length:227 },
-  { brand:'KATO', sku:'2-150', cat:'直線', name:'246mm', price:358, type:'straight', length:246 },
-  { brand:'KATO', sku:'2-180', cat:'直線', name:'369mm', price:468, type:'straight', length:369 },
-  { brand:'KATO', sku:'2-141', cat:'直線', name:'PC 123mm', price:358, type:'straight', length:123 },
-  { brand:'KATO', sku:'2-152', cat:'直線', name:'PC 246mm', price:358, type:'straight', length:246 },
-  { brand:'KATO', sku:'2-181', cat:'直線', name:'PC 369mm', price:495, type:'straight', length:369 },
-  // ═══ HO曲線 ═══
-  { brand:'KATO', sku:'2-280', cat:'曲線', name:'R370 22.5°', price:358, type:'curve', radius:370, angle:22.5 },
-  { brand:'KATO', sku:'2-260', cat:'曲線', name:'R430 22.5°', price:358, type:'curve', radius:430, angle:22.5 },
-  { brand:'KATO', sku:'2-270', cat:'曲線', name:'R490 22.5°', price:413, type:'curve', radius:490, angle:22.5 },
-  { brand:'KATO', sku:'2-210', cat:'曲線', name:'R550 22.5°', price:426, type:'curve', radius:550, angle:22.5 },
-  { brand:'KATO', sku:'2-220', cat:'曲線', name:'R610 22.5°', price:440, type:'curve', radius:610, angle:22.5 },
-  { brand:'KATO', sku:'2-230', cat:'曲線', name:'R670 22.5°', price:454, type:'curve', radius:670, angle:22.5 },
-  { brand:'KATO', sku:'2-240', cat:'曲線', name:'R730 22.5°', price:468, type:'curve', radius:730, angle:22.5 },
-  { brand:'KATO', sku:'2-250', cat:'曲線', name:'R790 22.5°', price:440, type:'curve', radius:790, angle:22.5 },
-  { brand:'KATO', sku:'2-290', cat:'曲線', name:'R867 10°', price:550, type:'curve', radius:867, angle:10 },
-  { brand:'KATO', sku:'2-241', cat:'曲線', name:'PC R730 22.5°', price:468, type:'curve', radius:730, angle:22.5 },
-  { brand:'KATO', sku:'2-251', cat:'曲線', name:'PC R790 22.5°', price:481, type:'curve', radius:790, angle:22.5 },
-  { brand:'KATO', sku:'2-321', cat:'曲線', name:'PC R1546 11.25°', price:495, type:'curve', radius:1546, angle:11.25 },
-  { brand:'KATO', sku:'2-331', cat:'曲線', name:'PC R1606 11.25°', price:495, type:'curve', radius:1606, angle:11.25 },
-  // ═══ HO分岐 ═══
-  { brand:'KATO', sku:'2-840', cat:'分岐', name:'手動#4 左 R490', price:3520, type:'turnout', length:246, radius:490, angle:22.5 },
-  { brand:'KATO', sku:'2-841', cat:'分岐', name:'手動#4 右 R490', price:3520, type:'turnout', length:246, radius:490, angle:22.5 },
-  { brand:'KATO', sku:'2-852', cat:'分岐', name:'手動 左 R550', price:5500, type:'turnout', length:246, radius:550, angle:22.5 },
-  { brand:'KATO', sku:'2-853', cat:'分岐', name:'手動 右 R550', price:5500, type:'turnout', length:246, radius:550, angle:22.5 },
-  { brand:'KATO', sku:'2-860', cat:'分岐', name:'電動#6 左 R867', price:6820, type:'turnout', length:492, radius:867, angle:10 },
-  { brand:'KATO', sku:'2-861', cat:'分岐', name:'電動#6 右 R867', price:6820, type:'turnout', length:492, radius:867, angle:10 },
-  { brand:'KATO', sku:'2-862', cat:'分岐', name:'手動#6 左 R867', price:4400, type:'turnout', length:492, radius:867, angle:10 },
-  { brand:'KATO', sku:'2-863', cat:'分岐', name:'手動#6 右 R867', price:4400, type:'turnout', length:492, radius:867, angle:10 },
-  // ═══ HO特殊 ═══
-  { brand:'KATO', sku:'2-401', cat:'特殊', name:'交差 90°', price:1650, type:'crossing', length:60, angle:90 },
-  { brand:'KATO', sku:'2-170', cat:'特殊', name:'車止め 109mm', price:660, type:'bumper', length:109 },
-  { brand:'KATO', sku:'2-142', cat:'特殊', name:'リレーラー 123mm', price:990, type:'straight', length:123 },
-  { brand:'KATO', sku:'2-143', cat:'特殊', name:'アンカプラー 123mm', price:1650, type:'straight', length:123 },
-  { brand:'KATO', sku:'2-194', cat:'特殊', name:'スライド 232mm', price:3300, type:'straight', length:232 },
-  { brand:'KATO', sku:'2-001', cat:'特殊', name:'フレキ 900mm', price:1100, type:'straight', length:900 },
-  { brand:'KATO', sku:'2-151', cat:'特殊', name:'フィーダー 246mm', price:880, type:'straight', length:246 },
-  { brand:'KATO', sku:'2-153', cat:'特殊', name:'PCフィーダー 246mm', price:1540, type:'straight', length:246 },
-];
+// ── Catalog — loaded from catalog.tsv ──
+let CATALOG = [];
+
+function parseCatalogTSV(tsv) {
+  const lines = tsv.trim().split('\n');
+  const headers = lines[0].split('\t');
+  const items = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split('\t');
+    if (cols.length < 7) continue;
+    const row = {};
+    headers.forEach((h, j) => row[h] = (cols[j] || '').trim());
+    // Skip accessories (not placeable track)
+    if (row.type === 'accessory') continue;
+    // Numeric fields
+    const price = parseInt(row.price) || 0;
+    const length = parseInt(row.length) || 0;
+    const radius = parseInt(row.radius) || 0;
+    const angle = parseFloat(row.angle) || 0;
+    const radius2 = parseInt(row.radius2) || 0;
+    const tracks = parseInt(row.tracks) || 1;
+    const isDouble = tracks >= 2;
+    // Derive palette category from TSV category
+    const tsvCat = row.category || '';
+    let cat;
+    if (isDouble && (row.type === 'straight')) cat = '複線直線';
+    else if (isDouble && (row.type === 'curve')) cat = '複線曲線';
+    else if (row.type === 'straight') cat = '直線';
+    else if (row.type === 'curve') cat = '曲線';
+    else if (row.type === 'turnout') cat = '分岐';
+    else cat = '特殊';
+    // Derive variant
+    let variant;
+    if (tsvCat.includes('FL') || row.name.includes('フローティングラダー')) variant = 'ladder';
+    else if (tsvCat.includes('スラブ') || tsvCat.includes('高架')) variant = 'slab';
+    // Derive level
+    let level;
+    if (tsvCat.includes('高架')) level = 'elevated';
+    else if (tsvCat.includes('地上')) level = 'ground';
+    // Derive display name
+    let displayName = row.name.replace(/[（(].*?[）)]/g, '').trim();
+    if (row.brand === 'KATO') {
+      if (row.type === 'straight') {
+        const pc = row.name.includes('PC') || tsvCat.includes('PC') ? 'PC ' : '';
+        const special = row.name.match(/(フィーダー|リレーラー|アンカプラー|スライド|フレキ)/);
+        displayName = special ? `${pc}${special[1]} ${length}mm` : `${pc}${length}mm`;
+        if (special) cat = '特殊';
+      } else if (row.type === 'curve') {
+        const pc = row.name.includes('PC') || tsvCat.includes('PC') ? 'PC ' : '';
+        displayName = `${pc}R${radius} ${angle}°`;
+      } else if (row.type === 'turnout') {
+        displayName = row.name.replace(/ポイント/g, '')
+          .replace(/(\d)番/g, '#$1')
+          .replace(/手動/, '手動')
+          .replace(/電動/, '電動');
+      } else {
+        displayName = row.name;
+      }
+    }
+    const item = { brand: row.brand, sku: row.sku, cat, name: displayName, price, type: row.type };
+    if (length) item.length = length;
+    if (radius) item.radius = radius;
+    if (angle) item.angle = angle;
+    if (variant) item.variant = variant;
+    if (level) item.level = level;
+    if (isDouble) {
+      item.double = true;
+      if (radius2) {
+        item.innerR = radius;
+        item.outerR = radius2;
+        item.radius = Math.round((radius + radius2) / 2);
+      }
+    }
+    items.push(item);
+  }
+  // Sort: ground first, then elevated, then by brand (ArcPath first), then by type
+  const levelOrder = { ground: 0, undefined: 1, elevated: 2 };
+  const catOrder = { '直線': 0, '曲線': 1, '複線直線': 2, '複線曲線': 3, '分岐': 4, '特殊': 5 };
+  items.sort((a, b) => {
+    const co = (catOrder[a.cat] ?? 9) - (catOrder[b.cat] ?? 9);
+    if (co !== 0) return co;
+    const bo = (a.brand === 'ArcPath' ? 0 : 1) - (b.brand === 'ArcPath' ? 0 : 1);
+    if (bo !== 0) return bo;
+    const lo = (levelOrder[a.level] ?? 1) - (levelOrder[b.level] ?? 1);
+    if (lo !== 0) return lo;
+    return 0;
+  });
+  return items;
+}
+
+async function loadCatalog() {
+  const res = await fetch('catalog.tsv');
+  if (!res.ok) throw new Error('Failed to load catalog.tsv: ' + res.status);
+  const tsv = await res.text();
+  return parseCatalogTSV(tsv);
+}
 
 // ===============================================
 // Geometry — correct curve math per spec
@@ -2670,7 +2664,14 @@ function loadLayout() {
 // Init
 // ===============================================
 
-function init() {
+async function init() {
+  try {
+    CATALOG = await loadCatalog();
+  } catch (e) {
+    showError('カタログの読み込みに失敗しました: ' + e.message);
+    return;
+  }
+
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   svgEl.appendChild(defs);
 
