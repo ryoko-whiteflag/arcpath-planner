@@ -2,6 +2,8 @@
 
 ブラウザで動くHOゲージ鉄道模型のレイアウト設計ツールです。
 
+**[デモ: arcpath.whiteflag-3d.com/planner.html](https://arcpath.whiteflag-3d.com/planner.html)**
+
 ## 特徴
 
 - **モードレス操作** — レールを選んでキャンバスをクリック、端点ドラッグで延伸
